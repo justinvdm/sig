@@ -4,6 +4,7 @@
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
+  sig.map = map
 
 
   function sig(receiver) {
@@ -59,6 +60,20 @@
   function receive(s, x) {
     s.receiver(x, s)
     return s
+  }
+
+
+  function map(s, fn) {
+    var t = sig(mapper(fn))
+    watch(s, t)
+    return t
+  }
+
+
+  function mapper(fn) {
+    return function(x, t) {
+      push(t, fn(x))
+    }
   }
 
 

@@ -87,4 +87,18 @@ describe("sig", function() {
     sig.push(s, 4)
     results.should.be.empty
   })
+
+  it("should allow signals to map other signals", function() {
+    var results = []
+    var s = sig()
+    var dbl = sig.map(s, function(x) { return x * 2 })
+    var inc = sig.map(dbl, function(x) { return x + 1 })
+    sig.map(inc, function(x) { results.push(x) })
+
+    sig.push(s, 1)
+    sig.push(s, 2)
+    sig.push(s, 3)
+    sig.push(s, 4)
+    results.should.deep.equal([3, 5, 7, 9])
+  })
 })
