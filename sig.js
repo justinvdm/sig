@@ -5,6 +5,7 @@
   sig.watch = watch
   sig.unwatch = unwatch
   sig.map = map
+  sig.filter = filter
 
 
   function sig(receiver) {
@@ -76,6 +77,19 @@
     }
   }
 
+
+  function filter(s, fn) {
+    var t = sig(filterer(fn))
+    watch(s, t)
+    return t
+  }
+
+
+  function filterer(fn) {
+    return function(x, t) {
+      if (fn(x)) push(t, x)
+    }
+  }
 
   function rm(arr, x) {
     var i = arr.indexOf(x)

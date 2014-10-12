@@ -101,4 +101,23 @@ describe("sig", function() {
     sig.push(s, 4)
     results.should.deep.equal([3, 5, 7, 9])
   })
+
+  it("should allow signals to filter other signals", function() {
+    var results = []
+    var s = sig()
+    var odd = sig.filter(s, function(x) { return x % 2 })
+    var ltTen = sig.filter(odd, function(x) { return x < 10 })
+    sig.map(ltTen, function(x) { results.push(x) })
+
+    sig.push(s, 2)
+    sig.push(s, 3)
+    sig.push(s, 4)
+    sig.push(s, 5)
+    sig.push(s, 6)
+    sig.push(s, 11)
+    sig.push(s, 12)
+    sig.push(s, 15)
+    sig.push(s, 16)
+    results.should.deep.equal([3, 5])
+  })
 })
