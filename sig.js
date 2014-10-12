@@ -30,6 +30,7 @@
   function watch(s, t) {
     s.targets.push(t)
     t.sources.push(s)
+    return s
   }
 
 
@@ -46,6 +47,7 @@
   function unwatch(s, t) {
     unsource(s, t)
     untarget(s, t)
+    return s
   }
 
 
