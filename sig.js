@@ -103,7 +103,10 @@
 
   function spread(fn) {
     return function(values) {
-      return fn.apply(fn, values)
+      var args = arguments.length > 1
+        ? values.concat(Array.prototype.slice.call(arguments, 1))
+        : values
+      return fn.apply(fn, args)
     }
   }
 

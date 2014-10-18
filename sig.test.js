@@ -212,4 +212,12 @@ describe("sig", function() {
       }))
       ().should.deep.equal([4, 6, 8])
   })
+
+  it("s spread utility should append additional args", function() {
+    var fn = sig.spread(function(a, b, c, d) {
+      return [a, b, c, d]
+    })
+
+    fn([1, 2], 3, 4).should.deep.equal([1, 2, 3, 4])
+  })
 })
