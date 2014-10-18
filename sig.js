@@ -8,6 +8,7 @@
   sig.filter = filter
   sig.limit = limit
   sig.once = once
+  sig.isSig = isSig
   sig.spread = spread
 
 
@@ -92,6 +93,11 @@
 
   function once(s) {
     return limit(s, 1)
+  }
+
+
+  function isSig(s) {
+    return (s || 0).type == 'sig'
   }
 
 

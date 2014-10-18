@@ -177,6 +177,13 @@ describe("sig", function() {
     results.should.deep.equal([1])
   })
 
+  it("should prove a utility for checking if something is a signal", function() {
+    sig.isSig(void 0).should.be.false
+    sig.isSig(null).should.be.false
+    sig.isSig({}).should.be.false
+    sig.isSig(sig()).should.be.true
+  })
+
   it("should provide a spread utility", function() {
     dp([1, 2, 3])
       (sig.spread(function(a, b, c) {
