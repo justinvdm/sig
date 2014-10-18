@@ -267,4 +267,28 @@ describe("sig", function() {
 
     results.should.deep.equal([1, 2, 3])
   })
+
+  it("should prevent duplicate sources", function() {
+    var s = sig()
+    var t = sig()
+    sig.watch(s, t)
+    sig.watch(s, t)
+    t.sources.should.have.length(1)
+  })
+
+  it("should prevent duplicate targets", function() {
+    var s = sig()
+    var t = sig()
+    sig.watch(s, t)
+    sig.watch(s, t)
+    s.targets.should.have.length(1)
+  })
+
+  it("should prevent duplicate dependencies", function() {
+    var s = sig()
+    var t = sig()
+    sig.depend(s, t)
+    sig.depend(s, t)
+    s.dependants.should.have.length(1)
+  })
 })

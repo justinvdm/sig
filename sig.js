@@ -37,6 +37,7 @@
 
 
   function watch(s, t) {
+    unwatch(s, t)
     s.targets.push(t)
     t.sources.push(s)
     return s
@@ -44,8 +45,10 @@
 
 
   function depend(s, t) {
+    undepend(s, t)
     s.dependants.push(t)
   }
+
 
   function undepend(s, t) {
     rm(s.dependants, t)
