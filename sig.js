@@ -8,6 +8,7 @@
   sig.filter = filter
   sig.limit = limit
   sig.once = once
+  sig.spread = spread
 
 
   function sig(receiver) {
@@ -91,6 +92,13 @@
 
   function once(s) {
     return limit(s, 1)
+  }
+
+
+  function spread(fn) {
+    return function(values) {
+      return fn.apply(fn, values)
+    }
   }
 
 

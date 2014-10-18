@@ -176,4 +176,15 @@ describe("sig", function() {
 
     results.should.deep.equal([1])
   })
+
+  it("should provide a spread utility", function() {
+    dp([1, 2, 3])
+      (sig.spread(function(a, b, c) {
+        return [a + 1, b + 1, c + 1]
+      }))
+      (sig.spread(function(a, b, c) {
+        return [a * 2, b * 2, c * 2]
+      }))
+      ().should.deep.equal([4, 6, 8])
+  })
 })
