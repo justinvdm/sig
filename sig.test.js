@@ -138,4 +138,42 @@ describe("sig", function() {
 
     results.should.deep.equal([3, 5])
   })
+
+  it("should support signal limiters", function() {
+    var results = []
+    var s = sig()
+
+    dp(s)
+      (sig.limit, 3)
+      (sig.map, function(x) { results.push(x) })
+
+    dp(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
+
+    results.should.deep.equal([1, 2, 3])
+  })
+
+  it("should provide a 'once' limiter", function() {
+    var results = []
+    var s = sig()
+
+    dp(s)
+      (sig.once, 3)
+      (sig.map, function(x) { results.push(x) })
+
+    dp(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
+
+    results.should.deep.equal([1])
+  })
 })

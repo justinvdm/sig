@@ -6,6 +6,8 @@
   sig.unwatch = unwatch
   sig.map = map
   sig.filter = filter
+  sig.limit = limit
+  sig.once = once
 
 
   function sig(receiver) {
@@ -73,17 +75,29 @@
   }
 
 
-  function mapper(fn) {
-    return function(x, t) {
-      push(t, fn(x))
-    }
-  }
-
-
   function filter(s, fn) {
     var t = sig(filterer(fn))
     watch(s, t)
     return t
+  }
+
+
+  function limit(s, n) {
+    var t = sig(limiter(n))
+    watch(s, t)
+    return t
+  }
+
+
+  function once(s) {
+    return limit(s, 1)
+  }
+
+
+  function mapper(fn) {
+    return function(x, t) {
+      push(t, fn(x))
+    }
   }
 
 
@@ -92,6 +106,17 @@
       if (fn(x)) push(t, x)
     }
   }
+
+
+  function limiter(n) {
+    i = 0
+
+    return function(x, t) {
+      if (++i > n) reset(t)
+      else push(t, x)
+    }
+  }
+
 
   function rm(arr, x) {
     var i = arr.indexOf(x)
