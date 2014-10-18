@@ -110,14 +110,14 @@
 
   function mapper(fn) {
     return function(x, t) {
-      push(t, fn(x))
+      push(t, fn(x, t))
     }
   }
 
 
   function filterer(fn) {
     return function(x, t) {
-      if (fn(x)) push(t, x)
+      if (fn(x, t)) push(t, x)
     }
   }
 

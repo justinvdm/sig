@@ -139,6 +139,24 @@ describe("sig", function() {
     results.should.deep.equal([3, 5])
   })
 
+  it("should provide the relevant stream to map functions", function(done) {
+    var s = sig()
+    var t = sig.map(s, function(x, u) {
+      u.should.equal(t)
+      done()
+    })
+    sig.push(s, 1)
+  })
+
+  it("should provide the relevant stream to filter functions", function(done) {
+    var s = sig()
+    var t = sig.filter(s, function(x, u) {
+      u.should.equal(t)
+      done()
+    })
+    sig.push(s, 1)
+  })
+
   it("should support signal limiters", function() {
     var results = []
     var s = sig()
