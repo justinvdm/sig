@@ -47,21 +47,25 @@
   function depend(s, t) {
     undepend(s, t)
     s.dependants.push(t)
+    return s
   }
 
 
   function undepend(s, t) {
     rm(s.dependants, t)
+    return s
   }
 
 
   function untarget(s, t) {
     rm(s.targets, t)
+    return s
   }
 
 
   function unsource(s, t) {
     rm(t.sources, s)
+    return s
   }
 
 
