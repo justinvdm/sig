@@ -220,4 +220,51 @@ describe("sig", function() {
 
     fn([1, 2], 3, 4).should.deep.equal([1, 2, 3, 4])
   })
+
+  it("should support signal dependencies", function() {
+    var results = []
+    var s = sig()
+    var t = sig()
+    var u = sig()
+    sig.map(u, function(x) { results.push(x) })
+
+    sig.depend(s, t)
+    sig.depend(t, u)
+
+    dp(u)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+
+    results.should.deep.equal([1, 2, 3])
+
+    sig.reset(s)
+
+    dp(u)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
+
+    results.should.deep.equal([1, 2, 3])
+  })
+
+  it("should allow signals to stop depending on other signals", function() {
+    var results = []
+    var s = sig()
+    var t = sig()
+    var u = sig()
+    sig.map(u, function(x) { results.push(x) })
+
+    sig.depend(s, t)
+    sig.depend(t, u)
+    sig.undepend(t, u)
+    sig.reset(s)
+
+    dp(u)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+
+    results.should.deep.equal([1, 2, 3])
+  })
 })

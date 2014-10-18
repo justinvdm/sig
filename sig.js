@@ -10,6 +10,8 @@
   sig.once = once
   sig.isSig = isSig
   sig.spread = spread
+  sig.depend = depend
+  sig.undepend = undepend
 
 
   function sig(receiver) {
@@ -17,16 +19,19 @@
       type: 'sig',
       sources: [],
       targets: [],
+      dependants: [],
       receiver: receiver || noop
     }
   }
 
 
   function reset(s) {
-    s.sources.map(function(source) { untarget(source, s) })
-    s.targets.map(function(target) { unsource(s, target) })
+    s.sources.forEach(function(source) { untarget(source, s) })
+    s.targets.forEach(function(target) { unsource(s, target) })
+    s.dependants.forEach(function(dependant) { reset(dependant) })
     s.sources = []
     s.targets = []
+    s.dependants = []
     return s
   }
 
@@ -35,6 +40,15 @@
     s.targets.push(t)
     t.sources.push(s)
     return s
+  }
+
+
+  function depend(s, t) {
+    s.dependants.push(t)
+  }
+
+  function undepend(s, t) {
+    rm(s.dependants, t)
   }
 
 
