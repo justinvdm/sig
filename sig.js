@@ -26,8 +26,8 @@
 
 
   function reset(s) {
-    s.sources.forEach(function(source) { untarget(source, s) })
-    s.targets.forEach(function(target) { unsource(s, target) })
+    s.sources.forEach(function(source) { untarget(s, source) })
+    s.targets.forEach(function(target) { unsource(target, s) })
     s.dependants.forEach(function(dependant) { reset(dependant) })
     s.sources = []
     s.targets = []
@@ -36,43 +36,43 @@
   }
 
 
-  function watch(s, t) {
-    unwatch(s, t)
+  function watch(t, s) {
+    unwatch(t, s)
     s.targets.push(t)
     t.sources.push(s)
-    return s
+    return t
   }
 
 
-  function depend(s, t) {
-    undepend(s, t)
+  function depend(t, s) {
+    undepend(t, s)
     s.dependants.push(t)
-    return s
+    return t
   }
 
 
-  function undepend(s, t) {
+  function undepend(t, s) {
     rm(s.dependants, t)
-    return s
+    return t
   }
 
 
-  function untarget(s, t) {
+  function untarget(t, s) {
     rm(s.targets, t)
-    return s
+    return t
   }
 
 
-  function unsource(s, t) {
+  function unsource(t, s) {
     rm(t.sources, s)
-    return s
+    return t
   }
 
 
-  function unwatch(s, t) {
-    unsource(s, t)
-    untarget(s, t)
-    return s
+  function unwatch(t, s) {
+    unsource(t, s)
+    untarget(t, s)
+    return t
   }
 
 
@@ -93,21 +93,21 @@
 
   function map(s, fn) {
     var t = sig(mapper(fn))
-    watch(s, t)
+    watch(t, s)
     return t
   }
 
 
   function filter(s, fn) {
     var t = sig(filterer(fn))
-    watch(s, t)
+    watch(t, s)
     return t
   }
 
 
   function limit(s, n) {
     var t = sig(limiter(n))
-    watch(s, t)
+    watch(t, s)
     return t
   }
 

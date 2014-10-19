@@ -10,8 +10,8 @@ describe("sig", function() {
     var s2 = sig()
     var t = sig(function(x) { results.push(x) })
 
-    sig.watch(s1, t)
-    sig.watch(s2, t)
+    sig.watch(t, s1)
+    sig.watch(t, s2)
 
     sig.push(s1, 1)
     sig.push(s2, 2)
@@ -28,9 +28,8 @@ describe("sig", function() {
     var t1 = sig(function(x) { results1.push(x) })
     var t2 = sig(function(x) { results2.push(x) })
 
-    dp(s)
-      (sig.watch, t1)
-      (sig.watch, t2)
+    sig.watch(t1, s)
+    sig.watch(t2, s)
 
     dp(s)
       (sig.push, 1)
@@ -48,8 +47,8 @@ describe("sig", function() {
     var s2 = sig()
     var t = sig(function(x) { results.push(x) })
 
-    sig.watch(s1, t)
-    sig.watch(s2, t)
+    sig.watch(t, s1)
+    sig.watch(t, s2)
     sig.reset(t)
 
     sig.push(s1, 1)
@@ -67,8 +66,8 @@ describe("sig", function() {
     var t1 = sig(function(x) { results1.push(x) })
     var t2 = sig(function(x) { results2.push(x) })
 
-    sig.watch(s, t1)
-    sig.watch(s, t2)
+    sig.watch(t1, s)
+    sig.watch(t2, s)
     sig.reset(s)
 
     dp(s)
@@ -86,8 +85,8 @@ describe("sig", function() {
     var s = sig()
     var t = sig(function(x) { results.push(x) })
 
-    sig.watch(s, t)
-    sig.unwatch(s, t)
+    sig.watch(t, s)
+    sig.unwatch(t, s)
 
     dp(s)
       (sig.push, 1)
@@ -228,8 +227,8 @@ describe("sig", function() {
     var u = sig()
     sig.map(u, function(x) { results.push(x) })
 
-    sig.depend(s, t)
-    sig.depend(t, u)
+    sig.depend(t, s)
+    sig.depend(u, t)
 
     dp(u)
       (sig.push, 1)
@@ -255,9 +254,9 @@ describe("sig", function() {
     var u = sig()
     sig.map(u, function(x) { results.push(x) })
 
-    sig.depend(s, t)
-    sig.depend(t, u)
-    sig.undepend(t, u)
+    sig.depend(t, s)
+    sig.depend(u, t)
+    sig.undepend(u, t)
     sig.reset(s)
 
     dp(u)
@@ -271,24 +270,24 @@ describe("sig", function() {
   it("should prevent duplicate sources", function() {
     var s = sig()
     var t = sig()
-    sig.watch(s, t)
-    sig.watch(s, t)
+    sig.watch(t, s)
+    sig.watch(t, s)
     t.sources.should.have.length(1)
   })
 
   it("should prevent duplicate targets", function() {
     var s = sig()
     var t = sig()
-    sig.watch(s, t)
-    sig.watch(s, t)
+    sig.watch(t, s)
+    sig.watch(t, s)
     s.targets.should.have.length(1)
   })
 
   it("should prevent duplicate dependencies", function() {
     var s = sig()
     var t = sig()
-    sig.depend(s, t)
-    sig.depend(s, t)
+    sig.depend(t, s)
+    sig.depend(t, s)
     s.dependants.should.have.length(1)
   })
 })
