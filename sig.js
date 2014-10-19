@@ -195,7 +195,7 @@
 
 
   function limiter(n) {
-    i = 0
+    var i = 0
 
     return function(x, t) {
       if (++i > n) reset(t)
