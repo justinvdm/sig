@@ -8,6 +8,7 @@
   sig.filter = filter
   sig.limit = limit
   sig.once = once
+  sig.then = then
   sig.isSig = isSig
   sig.spread = spread
   sig.depend = depend
@@ -114,6 +115,11 @@
 
   function once(s) {
     return limit(s, 1)
+  }
+
+
+  function then(s, fn) {
+    return map(once(s), fn)
   }
 
 

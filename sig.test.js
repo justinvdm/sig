@@ -180,8 +180,26 @@ describe("sig", function() {
     var s = sig()
 
     dp(s)
-      (sig.once, 3)
+      (sig.once)
       (sig.map, function(x) { results.push(x) })
+
+    dp(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
+
+    results.should.deep.equal([1])
+  })
+
+  it("should provide a sugar method for mapping once", function() {
+    var results = []
+    var s = sig()
+
+    dp(s)
+      (sig.then, function(x) { results.push(x) })
 
     dp(s)
       (sig.push, 1)
