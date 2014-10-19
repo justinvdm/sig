@@ -4,11 +4,50 @@ var dp = require('drainpipe')
 
 
 describe("sig", function() {
+  it("should support signal pausing and resuming", function() {
+    var results = []
+    var s = sig()
+    var t = sig(function(x, t) { sig.push(t, x) })
+    var u = sig(function(x) { results.push(x) })
+
+    sig.watch(t, s)
+    sig.watch(u, t)
+
+    sig.push(s, 1)
+    results.should.be.empty
+
+    sig.resume(s)
+    results.should.be.empty
+
+    sig.resume(t)
+    results.should.deep.equal([1])
+
+    sig.push(s, 2)
+    results.should.deep.equal([1, 2])
+
+    sig.pause(t)
+    sig.push(s, 3)
+    results.should.deep.equal([1, 2])
+
+    sig.resume(t)
+    results.should.deep.equal([1, 2, 3])
+
+    sig.pause(s)
+    sig.push(s, 4)
+
+    sig.resume(s)
+    results.should.deep.equal([1, 2, 3, 4])
+  })
+
   it("should allow multiple source signals", function() {
     var results = []
     var s1 = sig()
     var s2 = sig()
     var t = sig(function(x) { results.push(x) })
+
+    sig.resume(t)
+    sig.resume(s1)
+    sig.resume(s2)
 
     sig.watch(t, s1)
     sig.watch(t, s2)
@@ -27,6 +66,10 @@ describe("sig", function() {
     var s = sig()
     var t1 = sig(function(x) { results1.push(x) })
     var t2 = sig(function(x) { results2.push(x) })
+
+    sig.resume(s)
+    sig.resume(t1)
+    sig.resume(t2)
 
     sig.watch(t1, s)
     sig.watch(t2, s)
@@ -47,6 +90,10 @@ describe("sig", function() {
     var s2 = sig()
     var t = sig(function(x) { results.push(x) })
 
+    sig.resume(s1)
+    sig.resume(s2)
+    sig.resume(t)
+
     sig.watch(t, s1)
     sig.watch(t, s2)
     sig.reset(t)
@@ -66,6 +113,10 @@ describe("sig", function() {
     var t1 = sig(function(x) { results1.push(x) })
     var t2 = sig(function(x) { results2.push(x) })
 
+    sig.resume(s)
+    sig.resume(t1)
+    sig.resume(t2)
+
     sig.watch(t1, s)
     sig.watch(t2, s)
     sig.reset(s)
@@ -84,6 +135,9 @@ describe("sig", function() {
     var results = []
     var s = sig()
     var t = sig(function(x) { results.push(x) })
+
+    sig.resume(s)
+    sig.resume(t)
 
     sig.watch(t, s)
     sig.unwatch(t, s)

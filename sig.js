@@ -4,6 +4,8 @@
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
+  sig.pause = pause
+  sig.resume = resume
   sig.map = map
   sig.filter = filter
   sig.limit = limit
@@ -18,6 +20,8 @@
   function sig(receiver) {
     return {
       type: 'sig',
+      paused: true,
+      buffer: [],
       sources: [],
       targets: [],
       dependants: [],
@@ -29,7 +33,7 @@
   function reset(s) {
     s.sources.forEach(function(source) { untarget(s, source) })
     s.targets.forEach(function(target) { unsource(target, s) })
-    s.dependants.forEach(function(dependant) { reset(dependant) })
+    s.dependants.forEach(reset)
     s.sources = []
     s.targets = []
     s.dependants = []
@@ -78,11 +82,11 @@
 
 
   function push(s, x) {
-    var targets = s.targets
-    var i = -1
-    var n = targets.length
-    while (++i < n) receive(targets[i], x)
-    return s
+    if (s.paused) return buffer(s, x)
+
+    return s.paused
+      ? buffer(s, x)
+      : send(s, x)
   }
 
 
@@ -92,9 +96,45 @@
   }
 
 
+  function pause(s) {
+    s.paused = true
+  }
+
+
+  function resume(s) {
+    s.paused = false
+    flush(s)
+  }
+
+
+  function flush(s) {
+    var buffer = s.buffer
+    var i = -1
+    var n = buffer.length
+    while (++i < n) send(s, buffer[i])
+    s.buffer = []
+  }
+
+
+  function send(s, x) {
+    var targets = s.targets
+    var i = -1
+    var n = targets.length
+    while (++i < n) receive(targets[i], x)
+    return s
+  }
+
+
+  function buffer(s, x) {
+    s.buffer.push(x)
+    return s
+  }
+
+
   function map(s, fn) {
     var t = sig(mapper(fn))
     watch(t, s)
+    resume(s)
     return t
   }
 
@@ -102,6 +142,7 @@
   function filter(s, fn) {
     var t = sig(filterer(fn))
     watch(t, s)
+    resume(s)
     return t
   }
 
@@ -109,6 +150,7 @@
   function limit(s, n) {
     var t = sig(limiter(n))
     watch(t, s)
+    resume(s)
     return t
   }
 
