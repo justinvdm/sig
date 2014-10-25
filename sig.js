@@ -82,8 +82,6 @@
 
 
   function push(s, x) {
-    if (s.paused) return buffer(s, x)
-
     return s.paused
       ? buffer(s, x)
       : send(s, x)
