@@ -3,6 +3,17 @@ var sig = require('./sig')
 var dp = require('drainpipe')
 
 
+function capture(s) {
+  var values = []
+
+  sig.map(s, function(x) {
+    values.push(x)
+  })
+
+  return values
+}
+
+
 describe("sig", function() {
   it("should support signal pausing and resuming", function() {
     var results = []
@@ -170,13 +181,13 @@ describe("sig", function() {
   })
 
   it("should allow signals to filter other signals", function() {
-    var results = []
     var s = sig()
 
-    dp(s)
+    var results = dp(s)
       (sig.filter, function(x) { return x % 2 })
       (sig.filter, function(x) { return x < 10 })
-      (sig.map, function(x) { results.push(x) })
+      (capture)
+      ()
 
     dp(s)
       (sig.push, 2)
@@ -214,9 +225,10 @@ describe("sig", function() {
     var results = []
     var s = sig()
 
-    dp(s)
+    var results = dp(s)
       (sig.limit, 3)
-      (sig.map, function(x) { results.push(x) })
+      (capture)
+      ()
 
     dp(s)
       (sig.push, 1)
@@ -233,9 +245,10 @@ describe("sig", function() {
     var results = []
     var s = sig()
 
-    dp(s)
+    var results = dp(s)
       (sig.once)
-      (sig.map, function(x) { results.push(x) })
+      (capture)
+      ()
 
     dp(s)
       (sig.push, 1)
@@ -293,11 +306,10 @@ describe("sig", function() {
   })
 
   it("should support signal dependencies", function() {
-    var results = []
     var s = sig()
     var t = sig()
     var u = sig()
-    sig.map(u, function(x) { results.push(x) })
+    var results = capture(u)
 
     sig.depend(t, s)
     sig.depend(u, t)
@@ -320,11 +332,10 @@ describe("sig", function() {
   })
 
   it("should allow signals to stop depending on other signals", function() {
-    var results = []
     var s = sig()
     var t = sig()
     var u = sig()
-    sig.map(u, function(x) { results.push(x) })
+    var results = capture(u)
 
     sig.depend(t, s)
     sig.depend(u, t)
@@ -361,5 +372,10 @@ describe("sig", function() {
     sig.depend(t, s)
     sig.depend(t, s)
     s.dependants.should.have.length(1)
+  })
+
+  it("should allow initial values to be given up front", function() {
+    capture(sig([23])).should.deep.equal([23])
+    capture(sig([1, 2, 3, 4])).should.deep.equal([1, 2, 3, 4])
   })
 })

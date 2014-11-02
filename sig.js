@@ -17,16 +17,23 @@
   sig.undepend = undepend
 
 
-  function sig(receiver) {
-    return {
+  function sig(obj) {
+    if (isSig(obj)) return obj
+
+    var s = {
       type: 'sig',
       paused: true,
-      buffer: [],
       sources: [],
       targets: [],
+      buffer: [],
       dependants: [],
-      receiver: receiver || noop
+      receiver: noop
     }
+
+    if (Array.isArray(obj)) s.buffer = obj
+    else if (typeof obj == 'function') s.receiver = obj
+
+    return s
   }
 
 
@@ -34,6 +41,7 @@
     s.sources.forEach(function(source) { untarget(s, source) })
     s.targets.forEach(function(target) { unsource(target, s) })
     s.dependants.forEach(reset)
+    s.buffer = []
     s.sources = []
     s.targets = []
     s.dependants = []
