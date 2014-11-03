@@ -379,4 +379,9 @@ describe("sig", function() {
     capture(sig([23])).should.deep.equal([23])
     capture(sig([1, 2, 3, 4])).should.deep.equal([1, 2, 3, 4])
   })
+
+  it("should act as an identity for existing signals", function() {
+    var s = sig()
+    sig(s).should.equal(s)
+  })
 })
