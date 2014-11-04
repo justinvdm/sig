@@ -406,3 +406,69 @@ describe("sig.spread", function() {
     fn([1, 2], 3, 4).should.deep.equal([1, 2, 3, 4])
   })
 })
+
+
+describe("sig.any", function() {
+  it("should support arrays with both signals and non-signals", function() {
+    var a = sig()
+    var b = sig()
+
+    var results = v([a, b, 23])
+      (sig.any)
+      (capture)
+      ()
+
+    results.should.be.empty
+
+    sig.push(a, 1)
+    results.should.deep.equal([[1, 0]])
+
+    sig.push(b, 2)
+    results.should.deep.equal([[1, 0], [2, 1]])
+
+    sig.push(a, 3)
+    results.should.deep.equal([[1, 0], [2, 1], [3, 0]])
+
+    sig.push(b, 4)
+    results.should.deep.equal([[1, 0], [2, 1], [3, 0], [4, 1]])
+  })
+  
+  it("should support objects with both signals and non-signals", function() {
+    var a = sig()
+    var b = sig()
+
+    var results = v({
+        a: a,
+        b: b,
+        c: 23
+      })
+      (sig.any)
+      (capture)
+      ()
+
+    results.should.be.empty
+
+    sig.push(a, 1)
+    results.should.deep.equal([[1, 'a']])
+
+    sig.push(b, 2)
+    results.should.deep.equal([[1, 'a'], [2, 'b']])
+
+    sig.push(a, 3)
+    results.should.deep.equal([[1, 'a'], [2, 'b'], [3, 'a']])
+
+    sig.push(b, 4)
+    results.should.deep.equal([[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
+  })
+
+  it("should reset all its listeners when the out signal is reset", function() {
+    var a = sig()
+    var b = sig()
+    var s = sig.any([a, b])
+    a.targets.should.have.length(1)
+    b.targets.should.have.length(1)
+    sig.reset(s)
+    a.targets.should.have.length(0)
+    b.targets.should.have.length(0)
+  })
+})

@@ -15,6 +15,7 @@
   sig.spread = spread
   sig.depend = depend
   sig.undepend = undepend
+  sig.any = any
 
 
   function sig(obj) {
@@ -171,6 +172,18 @@
   }
 
 
+  function any(values) {
+    var out = sig()
+
+    each(values, function(s, k) {
+      if (!sig.isSig(s)) return
+      sig.depend(sig.map(s, anyPusher(out, k)), out)
+    })
+
+    return out
+  }
+
+
   function isSig(s) {
     return (s || 0).type == 'sig'
   }
@@ -182,6 +195,13 @@
         ? values.concat(Array.prototype.slice.call(arguments, 1))
         : values
       return fn.apply(fn, args)
+    }
+  }
+
+
+  function anyPusher(s, k) {
+    return function(x, t) {
+      sig.push(s, [x, k])
     }
   }
 
@@ -207,6 +227,12 @@
       if (++i > n) reset(t)
       else push(t, x)
     }
+  }
+
+
+  function each(obj, fn) {
+    if (Array.isArray(obj)) return obj.forEach(fn)
+    for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
   }
 
 
