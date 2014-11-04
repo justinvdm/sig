@@ -139,7 +139,10 @@
 
 
   function map(s, fn) {
-    var t = sig(mapper(fn))
+    var t = sig(function(x, t) {
+      push(t, fn(x, t))
+    })
+
     watch(t, s)
     resume(s)
     return t
@@ -147,7 +150,10 @@
 
 
   function filter(s, fn) {
-    var t = sig(filterer(fn))
+    var t = sig(function(x, t) {
+      if (fn(x, t)) push(t, x)
+    })
+
     watch(t, s)
     resume(s)
     return t
@@ -155,7 +161,13 @@
 
 
   function limit(s, n) {
-    var t = sig(limiter(n))
+    var i = 0
+
+    var t = sig(function(x, t) {
+      if (++i > n) reset(t)
+      else push(t, x)
+    })
+
     watch(t, s)
     resume(s)
     return t
@@ -177,8 +189,14 @@
 
     each(values, function(s, k) {
       if (!sig.isSig(s)) return
-      sig.depend(sig.map(s, anyPusher(out, k)), out)
+      sig.depend(sig.map(s, pusher(k)), out)
     })
+
+    function pusher(k) {
+      return function(x, t) {
+        sig.push(out, [x, k])
+      }
+    }
 
     return out
   }
@@ -195,37 +213,6 @@
         ? values.concat(Array.prototype.slice.call(arguments, 1))
         : values
       return fn.apply(fn, args)
-    }
-  }
-
-
-  function anyPusher(s, k) {
-    return function(x, t) {
-      sig.push(s, [x, k])
-    }
-  }
-
-
-  function mapper(fn) {
-    return function(x, t) {
-      push(t, fn(x, t))
-    }
-  }
-
-
-  function filterer(fn) {
-    return function(x, t) {
-      if (fn(x, t)) push(t, x)
-    }
-  }
-
-
-  function limiter(n) {
-    var i = 0
-
-    return function(x, t) {
-      if (++i > n) reset(t)
-      else push(t, x)
     }
   }
 
