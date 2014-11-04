@@ -16,6 +16,7 @@
   sig.depend = depend
   sig.undepend = undepend
   sig.any = any
+  sig.all = all
 
 
   function sig(obj) {
@@ -202,6 +203,36 @@
   }
 
 
+  function all(values) {
+    var out = sig()
+    var remaining = {}
+    values = copy(values)
+
+    each(values, function(s, k) {
+      if (!sig.isSig(s)) return
+      remaining[k] = true
+    })
+
+    if (isEmpty(remaining)) sig.push(out, values)
+    else each(values, watch)
+
+    function watch(s, k) {
+      if (!sig.isSig(s)) return
+      sig.depend(sig.map(s, pusher(k)), out)
+    }
+
+    function pusher(k) {
+      return function(x, t) {
+        delete remaining[k]
+        values[k] = x
+        if (isEmpty(remaining)) sig.push(out, copy(values))
+      }
+    }
+
+    return out
+  }
+
+
   function isSig(s) {
     return (s || 0).type == 'sig'
   }
@@ -220,6 +251,21 @@
   function each(obj, fn) {
     if (Array.isArray(obj)) return obj.forEach(fn)
     for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
+  }
+
+
+  function isEmpty(obj) {
+    var k
+    for (k in obj) return false
+    return true
+  }
+
+
+  function copy(obj) {
+    if (Array.isArray(obj)) return obj.slice()
+    var result = {}
+    for (var k in obj) if (obj.hasOwnProperty(k)) result[k] = obj[k]
+    return result
   }
 
 

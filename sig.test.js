@@ -472,3 +472,172 @@ describe("sig.any", function() {
     b.targets.should.have.length(0)
   })
 })
+
+
+describe("sig.all", function() {
+  it("should support arrays with only non signals", function() {
+    v([21, 22, 23])
+     (sig.all)
+     (capture)
+     ().should.deep.equal([[21, 22, 23]])
+  })
+
+  it("should support objects with only non signals", function() {
+    v({
+       a: 21,
+       b: 22,
+       c: 23
+     })
+     (sig.all)
+     (capture)
+     ().should.deep.equal([{
+       a: 21,
+       b: 22,
+       c: 23
+     }])
+  })
+
+  it("should support arrays with both signals and non-signals", function() {
+    var a = sig()
+    var b = sig()
+
+    var results = v([a, b, 23])
+      (sig.all)
+      (capture)
+      ()
+
+    results.should.be.empty
+
+    sig.push(a, 1)
+    results.should.be.empty
+
+    sig.push(b, 2)
+    results.should.deep.equal([[1, 2, 23]])
+
+    sig.push(a, 3)
+    results.should.deep.equal([[1, 2, 23], [3, 2, 23]])
+
+    sig.push(b, 4)
+    results.should.deep.equal([[1, 2, 23], [3, 2, 23], [3, 4, 23]])
+  })
+  
+  it("should support objects with both signals and non-signals", function() {
+    var a = sig()
+    var b = sig()
+
+    var results = v({
+        a: a,
+        b: b,
+        c: 23 
+      })
+      (sig.all)
+      (capture)
+      ()
+
+    results.should.be.empty
+
+    sig.push(a, 1)
+
+    results.should.be.empty
+
+    sig.push(b, 2)
+
+    results.should.deep.equal([{
+      a: 1,
+      b: 2,
+      c: 23
+    }])
+
+    sig.push(a, 3)
+
+    results.should.deep.equal([{
+      a: 1,
+      b: 2,
+      c: 23
+    }, {
+      a: 3,
+      b: 2,
+      c: 23
+    }])
+
+    sig.push(b, 4)
+
+    results.should.deep.equal([{
+      a: 1,
+      b: 2,
+      c: 23
+    }, {
+      a: 3,
+      b: 2,
+      c: 23
+    }, {
+      a: 3,
+      b: 4,
+      c: 23
+    }])
+  })
+
+  it("should output copies of a given array", function() {
+    var a = sig()
+
+    var results = v([a, 23])
+      (sig.all)
+      (capture)
+      ()
+
+    sig.push(a, 1)
+    sig.push(a, 2)
+    sig.push(a, 3)
+
+    results.should.have.length(3)
+    results[0].should.not.equal(results[1])
+    results[1].should.not.equal(results[2])
+    results[2].should.not.equal(results[0])
+  })
+
+  it("should output copies of a given object", function() {
+    var a = sig()
+
+    var results = v({
+        a: a,
+        b: 23
+      })
+      (sig.all)
+      (capture)
+      ()
+
+    sig.push(a, 1)
+    sig.push(a, 2)
+    sig.push(a, 3)
+
+    results.should.have.length(3)
+    results[0].should.not.equal(results[1])
+    results[1].should.not.equal(results[2])
+    results[2].should.not.equal(results[0])
+  })
+
+  it("should reset all its listeners when the out signal is reset", function() {
+    var a = sig()
+    var b = sig()
+    var s = sig.all([a, b])
+    a.targets.should.have.length(1)
+    b.targets.should.have.length(1)
+    sig.reset(s)
+    a.targets.should.have.length(0)
+    b.targets.should.have.length(0)
+  })
+
+  it("should work with signals with non-empty buffers", function() {
+    var a = sig()
+    sig.push(a, 1)
+
+    var b = sig()
+    sig.push(b, 2)
+
+    v([a, b])
+     (sig.all)
+     (capture)
+     ()
+     .should.deep.equal([[1, 2]])
+  })
+})
