@@ -18,8 +18,12 @@ describe("sig", function() {
   it("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
-    var t = sig(function(x, t) { sig.push(t, x) })
-    var u = sig(function(x) { results.push(x) })
+
+    var t = sig()
+    t.receiver = function(x, t) { sig.push(t, x) }
+
+    var u = sig()
+    u.receiver = function(x) { results.push(x) }
 
     sig.watch(t, s)
     sig.watch(u, t)
@@ -54,7 +58,9 @@ describe("sig", function() {
     var results = []
     var s1 = sig()
     var s2 = sig()
-    var t = sig(function(x) { results.push(x) })
+
+    var t = sig()
+    t.receiver = function(x) { results.push(x) }
 
     sig.resume(t)
     sig.resume(s1)
@@ -75,8 +81,12 @@ describe("sig", function() {
     var results1 = []
     var results2 = []
     var s = sig()
-    var t1 = sig(function(x) { results1.push(x) })
-    var t2 = sig(function(x) { results2.push(x) })
+
+    var t1 = sig()
+    t1.receiver = function(x) { results1.push(x) }
+
+    var t2 = sig()
+    t2.receiver = function(x) { results2.push(x) }
 
     sig.resume(s)
     sig.resume(t1)
@@ -99,7 +109,9 @@ describe("sig", function() {
     var results = []
     var s1 = sig()
     var s2 = sig()
-    var t = sig(function(x) { results.push(x) })
+
+    var t = sig()
+    t.receiver = function(x) { results.push(x) }
 
     sig.resume(s1)
     sig.resume(s2)
@@ -121,8 +133,12 @@ describe("sig", function() {
     var results1 = []
     var results2 = []
     var s = sig()
-    var t1 = sig(function(x) { results1.push(x) })
-    var t2 = sig(function(x) { results2.push(x) })
+
+    var t1 = sig()
+    t1.receiver = function(x) { results1.push(x) }
+
+    var t2 = sig()
+    t2.receiver = function(x) { results2.push(x) }
 
     sig.resume(s)
     sig.resume(t1)
@@ -145,7 +161,9 @@ describe("sig", function() {
   it("should allow a signal to stop watching another", function() {
     var results = []
     var s = sig()
-    var t = sig(function(x) { results.push(x) })
+
+    var t = sig()
+    t.receiver = function(x) { results.push(x) }
 
     sig.resume(s)
     sig.resume(t)
@@ -231,14 +249,18 @@ describe("sig", function() {
     s.dependants.should.have.length(1)
   })
 
-  it("should allow initial values to be given up front", function() {
+  it("should act as an identity for existing signals", function() {
+    var s = sig()
+    sig(s).should.equal(s)
+  })
+
+  it("should create a signal from an array of values", function() {
     capture(sig([23])).should.deep.equal([23])
     capture(sig([1, 2, 3, 4])).should.deep.equal([1, 2, 3, 4])
   })
 
-  it("should act as an identity for existing signals", function() {
-    var s = sig()
-    sig(s).should.equal(s)
+  it("should create a signal from a single value", function() {
+    capture(sig(23)).should.deep.equal([23])
   })
 })
 

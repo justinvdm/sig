@@ -11,29 +11,28 @@
   sig.limit = limit
   sig.once = once
   sig.then = then
-  sig.isSig = isSig
+  sig.any = any
+  sig.all = all
   sig.spread = spread
   sig.depend = depend
   sig.undepend = undepend
-  sig.any = any
-  sig.all = all
+  sig.isSig = isSig
 
 
   function sig(obj) {
     if (isSig(obj)) return obj
+    if (!arguments.length) obj = []
+    else if (!Array.isArray(obj)) obj = [obj]
 
     var s = {
       type: 'sig',
       paused: true,
       sources: [],
       targets: [],
-      buffer: [],
+      buffer: obj,
       dependants: [],
       receiver: noop
     }
-
-    if (Array.isArray(obj)) s.buffer = obj
-    else if (typeof obj == 'function') s.receiver = obj
 
     return s
   }
@@ -140,9 +139,11 @@
 
 
   function map(s, fn) {
-    var t = sig(function(x, t) {
+    var t = sig()
+
+    t.receiver = function(x, t) {
       push(t, fn(x, t))
-    })
+    }
 
     watch(t, s)
     resume(s)
@@ -151,9 +152,11 @@
 
 
   function filter(s, fn) {
-    var t = sig(function(x, t) {
+    var t = sig()
+      
+    t.receiver = function(x, t) {
       if (fn(x, t)) push(t, x)
-    })
+    }
 
     watch(t, s)
     resume(s)
@@ -163,11 +166,12 @@
 
   function limit(s, n) {
     var i = 0
-
-    var t = sig(function(x, t) {
+    var t = sig()
+    
+    t.receiver = function(x, t) {
       if (++i > n) reset(t)
       else push(t, x)
-    })
+    }
 
     watch(t, s)
     resume(s)
