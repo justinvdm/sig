@@ -310,7 +310,6 @@ describe("sig.filter", function() {
 
 describe("sig.limit", function() {
   it("should limit the given signal", function() {
-    var results = []
     var s = sig()
 
     var results = v(s)
@@ -333,7 +332,6 @@ describe("sig.limit", function() {
 
 describe("sig.once", function() {
   it("should limit a signal to its first output", function() {
-    var results = []
     var s = sig()
 
     var results = v(s)
