@@ -218,9 +218,9 @@
     })
 
     if (isEmpty(remaining)) sig.push(out, values)
-    else each(values, watch)
+    else each(values, watcher)
 
-    function watch(s, k) {
+    function watcher(s, k) {
       if (!sig.isSig(s)) return
       sig.depend(sig.map(s, pusher(k)), out)
     }

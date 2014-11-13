@@ -1,6 +1,6 @@
 require('chai').should()
 var sig = require('./sig')
-var v = require('drainpipe')
+var vv = require('drainpipe')
 
 
 function capture(s) {
@@ -95,11 +95,11 @@ describe("sig", function() {
     sig.watch(t1, s)
     sig.watch(t2, s)
 
-    v(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
+    vv(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
 
     results1.should.deep.equal([1, 2, 3, 4])
     results2.should.deep.equal([1, 2, 3, 4])
@@ -148,11 +148,11 @@ describe("sig", function() {
     sig.watch(t2, s)
     sig.reset(s)
 
-    v(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
+    vv(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
 
     results1.should.be.empty
     results2.should.be.empty
@@ -171,11 +171,11 @@ describe("sig", function() {
     sig.watch(t, s)
     sig.unwatch(t, s)
 
-    v(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
+    vv(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
 
     results.should.be.empty
   })
@@ -189,19 +189,19 @@ describe("sig", function() {
     sig.depend(t, s)
     sig.depend(u, t)
 
-    v(u)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
+    vv(u)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
 
     results.should.deep.equal([1, 2, 3])
 
     sig.reset(s)
 
-    v(u)
-     (sig.push, 4)
-     (sig.push, 5)
-     (sig.push, 6)
+    vv(u)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
 
     results.should.deep.equal([1, 2, 3])
   })
@@ -217,10 +217,10 @@ describe("sig", function() {
     sig.undepend(u, t)
     sig.reset(s)
 
-    v(u)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
+    vv(u)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
 
     results.should.deep.equal([1, 2, 3])
   })
@@ -270,12 +270,12 @@ describe("sig.map", function() {
     var results = []
     var s = sig()
 
-    v(s)
-     (sig.map, function(x) { return x * 2 })
-     (sig.map, function(x) { return x + 1 })
-     (sig.map, function(x) { results.push(x) })
+    vv(s)
+      (sig.map, function(x) { return x * 2 })
+      (sig.map, function(x) { return x + 1 })
+      (sig.map, function(x) { results.push(x) })
 
-    v(s)
+    vv(s)
      (sig.push, 1)
      (sig.push, 2)
      (sig.push, 3)
@@ -299,22 +299,22 @@ describe("sig.filter", function() {
   it("should filter the given signal", function() {
     var s = sig()
 
-    var results = v(s)
+    var results = vv(s)
       (sig.filter, function(x) { return x % 2 })
       (sig.filter, function(x) { return x < 10 })
       (capture)
       ()
 
-    v(s)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
-     (sig.push, 5)
-     (sig.push, 6)
-     (sig.push, 11)
-     (sig.push, 12)
-     (sig.push, 15)
-     (sig.push, 16)
+    vv(s)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
+      (sig.push, 11)
+      (sig.push, 12)
+      (sig.push, 15)
+      (sig.push, 16)
 
     results.should.deep.equal([3, 5])
   })
@@ -334,18 +334,18 @@ describe("sig.limit", function() {
   it("should limit the given signal", function() {
     var s = sig()
 
-    var results = v(s)
+    var results = vv(s)
       (sig.limit, 3)
       (capture)
       ()
 
-    v(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
-     (sig.push, 5)
-     (sig.push, 6)
+    vv(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
 
     results.should.deep.equal([1, 2, 3])
   })
@@ -356,18 +356,18 @@ describe("sig.once", function() {
   it("should limit a signal to its first output", function() {
     var s = sig()
 
-    var results = v(s)
+    var results = vv(s)
       (sig.once)
       (capture)
       ()
 
-    v(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
-     (sig.push, 5)
-     (sig.push, 6)
+    vv(s)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
+      (sig.push, 5)
+      (sig.push, 6)
 
     results.should.deep.equal([1])
   })
@@ -379,10 +379,10 @@ describe("sig.then", function() {
     var results = []
     var s = sig()
 
-    v(s)
+    vv(s)
       (sig.then, function(x) { results.push(x) })
 
-    v(s)
+    vv(s)
       (sig.push, 1)
       (sig.push, 2)
       (sig.push, 3)
@@ -407,15 +407,15 @@ describe("sig.isSig", function() {
 
 describe("sig.spread", function() {
   it("should spread an array out as a function's arguments", function() {
-    v([1, 2, 3])
-     (sig.spread(function(a, b, c) {
-       return [a + 1, b + 1, c + 1]
-     }))
-     (sig.spread(function(a, b, c) {
-       return [a * 2, b * 2, c * 2]
-     }))
-     ()
-     .should.deep.equal([4, 6, 8])
+    vv([1, 2, 3])
+      (sig.spread(function(a, b, c) {
+        return [a + 1, b + 1, c + 1]
+      }))
+      (sig.spread(function(a, b, c) {
+        return [a * 2, b * 2, c * 2]
+      }))
+      ()
+      .should.deep.equal([4, 6, 8])
   })
 
   it("should append additional args", function() {
@@ -433,7 +433,7 @@ describe("sig.any", function() {
     var a = sig()
     var b = sig()
 
-    var results = v([a, b, 23])
+    var results = vv([a, b, 23])
       (sig.any)
       (capture)
       ()
@@ -457,7 +457,7 @@ describe("sig.any", function() {
     var a = sig()
     var b = sig()
 
-    var results = v({
+    var results = vv({
         a: a,
         b: b,
         c: 23
@@ -496,32 +496,32 @@ describe("sig.any", function() {
 
 describe("sig.all", function() {
   it("should support arrays with only non signals", function() {
-    v([21, 22, 23])
+    vv([21, 22, 23])
      (sig.all)
      (capture)
      ().should.deep.equal([[21, 22, 23]])
   })
 
   it("should support objects with only non signals", function() {
-    v({
+    vv({
        a: 21,
        b: 22,
        c: 23
-     })
-     (sig.all)
-     (capture)
-     ().should.deep.equal([{
-       a: 21,
-       b: 22,
-       c: 23
-     }])
+      })
+      (sig.all)
+      (capture)
+      ().should.deep.equal([{
+        a: 21,
+        b: 22,
+        c: 23
+      }])
   })
 
   it("should support arrays with both signals and non-signals", function() {
     var a = sig()
     var b = sig()
 
-    var results = v([a, b, 23])
+    var results = vv([a, b, 23])
       (sig.all)
       (capture)
       ()
@@ -545,7 +545,7 @@ describe("sig.all", function() {
     var a = sig()
     var b = sig()
 
-    var results = v({
+    var results = vv({
         a: a,
         b: b,
         c: 23 
@@ -600,7 +600,7 @@ describe("sig.all", function() {
   it("should output copies of a given array", function() {
     var a = sig()
 
-    var results = v([a, 23])
+    var results = vv([a, 23])
       (sig.all)
       (capture)
       ()
@@ -618,7 +618,7 @@ describe("sig.all", function() {
   it("should output copies of a given object", function() {
     var a = sig()
 
-    var results = v({
+    var results = vv({
         a: a,
         b: 23
       })
@@ -654,10 +654,10 @@ describe("sig.all", function() {
     var b = sig()
     sig.push(b, 2)
 
-    v([a, b])
-     (sig.all)
-     (capture)
-     ()
-     .should.deep.equal([[1, 2]])
+    vv([a, b])
+      (sig.all)
+      (capture)
+      ()
+      .should.deep.equal([[1, 2]])
   })
 })
