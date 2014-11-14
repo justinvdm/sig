@@ -1,4 +1,4 @@
-require('chai').should()
+var assert = require('assert')
 var sig = require('./sig')
 var vv = require('drainpipe')
 
@@ -29,29 +29,29 @@ describe("sig", function() {
     sig.watch(u, t)
 
     sig.push(s, 1)
-    results.should.be.empty
+    assert(!results.length)
 
     sig.resume(s)
-    results.should.be.empty
+    assert(!results.length)
 
     sig.resume(t)
-    results.should.deep.equal([1])
+    assert.deepEqual(results, [1])
 
     sig.push(s, 2)
-    results.should.deep.equal([1, 2])
+    assert.deepEqual(results, [1, 2])
 
     sig.pause(t)
     sig.push(s, 3)
-    results.should.deep.equal([1, 2])
+    assert.deepEqual(results, [1, 2])
 
     sig.resume(t)
-    results.should.deep.equal([1, 2, 3])
+    assert.deepEqual(results, [1, 2, 3])
 
     sig.pause(s)
     sig.push(s, 4)
 
     sig.resume(s)
-    results.should.deep.equal([1, 2, 3, 4])
+    assert.deepEqual(results, [1, 2, 3, 4])
   })
 
   it("should allow multiple source signals", function() {
@@ -74,7 +74,7 @@ describe("sig", function() {
     sig.push(s1, 3)
     sig.push(s2, 4)
 
-    results.should.deep.equal([1, 2, 3, 4])
+    assert.deepEqual(results, [1, 2, 3, 4])
   })
 
   it("should allow multiple target signals", function() {
@@ -101,8 +101,8 @@ describe("sig", function() {
       (sig.push, 3)
       (sig.push, 4)
 
-    results1.should.deep.equal([1, 2, 3, 4])
-    results2.should.deep.equal([1, 2, 3, 4])
+    assert.deepEqual(results1, [1, 2, 3, 4])
+    assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
   it("should allow a target signal to be reset", function() {
@@ -126,7 +126,7 @@ describe("sig", function() {
     sig.push(s1, 3)
     sig.push(s2, 4)
 
-    results.should.be.empty
+    assert(!results.length)
   })
 
   it("should allow a source signal to be reset", function() {
@@ -154,8 +154,8 @@ describe("sig", function() {
       (sig.push, 3)
       (sig.push, 4)
 
-    results1.should.be.empty
-    results2.should.be.empty
+    assert(!results1.length)
+    assert(!results2.length)
   })
 
   it("should allow a signal to stop watching another", function() {
@@ -177,7 +177,7 @@ describe("sig", function() {
       (sig.push, 3)
       (sig.push, 4)
 
-    results.should.be.empty
+    assert(!results.length)
   })
 
   it("should support signal dependencies", function() {
@@ -194,7 +194,7 @@ describe("sig", function() {
       (sig.push, 2)
       (sig.push, 3)
 
-    results.should.deep.equal([1, 2, 3])
+    assert.deepEqual(results, [1, 2, 3])
 
     sig.reset(s)
 
@@ -203,7 +203,7 @@ describe("sig", function() {
       (sig.push, 5)
       (sig.push, 6)
 
-    results.should.deep.equal([1, 2, 3])
+    assert.deepEqual(results, [1, 2, 3])
   })
 
   it("should allow signals to stop depending on other signals", function() {
@@ -222,7 +222,7 @@ describe("sig", function() {
       (sig.push, 2)
       (sig.push, 3)
 
-    results.should.deep.equal([1, 2, 3])
+    assert.deepEqual(results, [1, 2, 3])
   })
 
   it("should prevent duplicate sources", function() {
@@ -230,7 +230,7 @@ describe("sig", function() {
     var t = sig()
     sig.watch(t, s)
     sig.watch(t, s)
-    t.sources.should.have.length(1)
+    assert.equal(t.sources.length, 1)
   })
 
   it("should prevent duplicate targets", function() {
@@ -238,7 +238,7 @@ describe("sig", function() {
     var t = sig()
     sig.watch(t, s)
     sig.watch(t, s)
-    s.targets.should.have.length(1)
+    assert.equal(s.targets.length, 1)
   })
 
   it("should prevent duplicate dependencies", function() {
@@ -246,42 +246,43 @@ describe("sig", function() {
     var t = sig()
     sig.depend(t, s)
     sig.depend(t, s)
-    s.dependants.should.have.length(1)
+    assert.equal(s.dependants.length, 1)
   })
 
   it("should act as an identity for existing signals", function() {
     var s = sig()
-    sig(s).should.equal(s)
+    assert.strictEqual(sig(s), s)
   })
 
   it("should create a signal from an array of values", function() {
-    capture(sig([23])).should.deep.equal([23])
-    capture(sig([1, 2, 3, 4])).should.deep.equal([1, 2, 3, 4])
+    vv([23])
+      (sig)
+      (capture)
+      (assert.deepEqual, [23])
+
+    vv([1, 2, 3, 4])
+      (sig)
+      (capture)
+      (assert.deepEqual, [1, 2, 3, 4])
   })
 
   it("should create a signal from a single value", function() {
-    capture(sig(23)).should.deep.equal([23])
+    vv(23)
+      (sig)
+      (capture)
+      (assert.deepEqual, [23])
   })
 })
 
 
 describe("sig.map", function() {
   it("should map the given signal", function() {
-    var results = []
-    var s = sig()
-
-    vv(s)
+    vv([1, 2, 3, 4])
+      (sig)
       (sig.map, function(x) { return x * 2 })
       (sig.map, function(x) { return x + 1 })
-      (sig.map, function(x) { results.push(x) })
-
-    vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
-
-    results.should.deep.equal([3, 5, 7, 9])
+      (capture)
+      (assert.deepEqual, [3, 5, 7, 9])
   })
 
   it("should allow additional args", function() {
@@ -293,8 +294,7 @@ describe("sig.map", function() {
       (sig)
       (sig.map, fn, 23, 32)
       (capture)
-      ()
-      .should.deep.equal([
+      (assert.deepEqual, [
         [1, 23, 32],
         [2, 23, 32],
         [3, 23, 32],
@@ -305,26 +305,12 @@ describe("sig.map", function() {
 
 describe("sig.filter", function() {
   it("should filter the given signal", function() {
-    var s = sig()
-
-    var results = vv(s)
+    vv([2, 3, 4, 5, 6, 11, 12, 15, 16])
+      (sig)
       (sig.filter, function(x) { return x % 2 })
       (sig.filter, function(x) { return x < 10 })
       (capture)
-      ()
-
-    vv(s)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
-      (sig.push, 5)
-      (sig.push, 6)
-      (sig.push, 11)
-      (sig.push, 12)
-      (sig.push, 15)
-      (sig.push, 16)
-
-    results.should.deep.equal([3, 5])
+      (assert.deepEqual, [3, 5])
   })
 
   it("should allow additional args", function() {
@@ -336,8 +322,7 @@ describe("sig.filter", function() {
       (sig)
       (sig.filter, fn, 3, 2)
       (capture)
-      ()
-      .should.deep.equal([1, 3])
+      (assert.deepEqual, [1, 3])
   })
 })
 
@@ -359,7 +344,7 @@ describe("sig.limit", function() {
       (sig.push, 5)
       (sig.push, 6)
 
-    results.should.deep.equal([1, 2, 3])
+    assert.deepEqual(results, [1, 2, 3])
   })
 })
 
@@ -381,7 +366,7 @@ describe("sig.once", function() {
       (sig.push, 5)
       (sig.push, 6)
 
-    results.should.deep.equal([1])
+    assert.deepEqual(results, [1])
   })
 })
 
@@ -394,8 +379,7 @@ describe("sig.then", function() {
         return x + 1
       })
       (capture)
-      ()
-      .should.deep.equal([2])
+      (assert.deepEqual, [2])
   })
 
   it("should allow additional args", function() {
@@ -407,18 +391,17 @@ describe("sig.then", function() {
       (sig)
       (sig.then, fn, 23, 32)
       (capture)
-      ()
-      .should.deep.equal([[1, 23, 32]])
+      (assert.deepEqual, [[1, 23, 32]])
   })
 })
 
 
 describe("sig.isSig", function() {
   it("should determine whether something is a signal", function() {
-    sig.isSig(void 0).should.be.false
-    sig.isSig(null).should.be.false
-    sig.isSig({}).should.be.false
-    sig.isSig(sig()).should.be.true
+    assert(!sig.isSig(void 0))
+    assert(!sig.isSig(null))
+    assert(!sig.isSig({}))
+    assert(sig.isSig(sig()))
   })
 })
 
@@ -432,8 +415,7 @@ describe("sig.spread", function() {
       (sig.spread(function(a, b, c) {
         return [a * 2, b * 2, c * 2]
       }))
-      ()
-      .should.deep.equal([4, 6, 8])
+      (assert.deepEqual, [4, 6, 8])
   })
 
   it("should append additional args", function() {
@@ -441,7 +423,7 @@ describe("sig.spread", function() {
       return [a, b, c, d]
     })
 
-    fn([1, 2], 3, 4).should.deep.equal([1, 2, 3, 4])
+    assert.deepEqual(fn([1, 2], 3, 4), [1, 2, 3, 4])
   })
 })
 
@@ -456,19 +438,19 @@ describe("sig.any", function() {
       (capture)
       ()
 
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(a, 1)
-    results.should.deep.equal([[1, 0]])
+    assert.deepEqual(results, [[1, 0]])
 
     sig.push(b, 2)
-    results.should.deep.equal([[1, 0], [2, 1]])
+    assert.deepEqual(results, [[1, 0], [2, 1]])
 
     sig.push(a, 3)
-    results.should.deep.equal([[1, 0], [2, 1], [3, 0]])
+    assert.deepEqual(results, [[1, 0], [2, 1], [3, 0]])
 
     sig.push(b, 4)
-    results.should.deep.equal([[1, 0], [2, 1], [3, 0], [4, 1]])
+    assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
   })
   
   it("should support objects with both signals and non-signals", function() {
@@ -484,30 +466,31 @@ describe("sig.any", function() {
       (capture)
       ()
 
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(a, 1)
-    results.should.deep.equal([[1, 'a']])
+    assert.deepEqual(results, [[1, 'a']])
 
     sig.push(b, 2)
-    results.should.deep.equal([[1, 'a'], [2, 'b']])
+    assert.deepEqual(results, [[1, 'a'], [2, 'b']])
 
     sig.push(a, 3)
-    results.should.deep.equal([[1, 'a'], [2, 'b'], [3, 'a']])
+    assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a']])
 
     sig.push(b, 4)
-    results.should.deep.equal([[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
+    assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
   })
 
   it("should reset all its listeners when the out signal is reset", function() {
     var a = sig()
     var b = sig()
     var s = sig.any([a, b])
-    a.targets.should.have.length(1)
-    b.targets.should.have.length(1)
+    assert.equal(a.targets.length, 1)
+    assert.equal(b.targets.length, 1)
+
     sig.reset(s)
-    a.targets.should.have.length(0)
-    b.targets.should.have.length(0)
+    assert(!a.targets.length)
+    assert(!b.targets.length)
   })
 })
 
@@ -517,7 +500,7 @@ describe("sig.all", function() {
     vv([21, 22, 23])
      (sig.all)
      (capture)
-     ().should.deep.equal([[21, 22, 23]])
+     (assert.deepEqual, [[21, 22, 23]])
   })
 
   it("should support objects with only non signals", function() {
@@ -528,7 +511,7 @@ describe("sig.all", function() {
       })
       (sig.all)
       (capture)
-      ().should.deep.equal([{
+      (assert.deepEqual, [{
         a: 21,
         b: 22,
         c: 23
@@ -544,19 +527,19 @@ describe("sig.all", function() {
       (capture)
       ()
 
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(a, 1)
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(b, 2)
-    results.should.deep.equal([[1, 2, 23]])
+    assert.deepEqual(results, [[1, 2, 23]])
 
     sig.push(a, 3)
-    results.should.deep.equal([[1, 2, 23], [3, 2, 23]])
+    assert.deepEqual(results, [[1, 2, 23], [3, 2, 23]])
 
     sig.push(b, 4)
-    results.should.deep.equal([[1, 2, 23], [3, 2, 23], [3, 4, 23]])
+    assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
   })
   
   it("should support objects with both signals and non-signals", function() {
@@ -572,15 +555,15 @@ describe("sig.all", function() {
       (capture)
       ()
 
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(a, 1)
 
-    results.should.be.empty
+    assert(!results.length)
 
     sig.push(b, 2)
 
-    results.should.deep.equal([{
+    assert.deepEqual(results, [{
       a: 1,
       b: 2,
       c: 23
@@ -588,7 +571,7 @@ describe("sig.all", function() {
 
     sig.push(a, 3)
 
-    results.should.deep.equal([{
+    assert.deepEqual(results, [{
       a: 1,
       b: 2,
       c: 23
@@ -600,7 +583,7 @@ describe("sig.all", function() {
 
     sig.push(b, 4)
 
-    results.should.deep.equal([{
+    assert.deepEqual(results, [{
       a: 1,
       b: 2,
       c: 23
@@ -627,10 +610,10 @@ describe("sig.all", function() {
     sig.push(a, 2)
     sig.push(a, 3)
 
-    results.should.have.length(3)
-    results[0].should.not.equal(results[1])
-    results[1].should.not.equal(results[2])
-    results[2].should.not.equal(results[0])
+    assert.equal(results.length, 3)
+    assert.notStrictEqual(results[0], results[1])
+    assert.notStrictEqual(results[1], results[2])
+    assert.notStrictEqual(results[2], results[0])
   })
 
   it("should output copies of a given object", function() {
@@ -648,21 +631,22 @@ describe("sig.all", function() {
     sig.push(a, 2)
     sig.push(a, 3)
 
-    results.should.have.length(3)
-    results[0].should.not.equal(results[1])
-    results[1].should.not.equal(results[2])
-    results[2].should.not.equal(results[0])
+    assert.equal(results.length, 3)
+    assert.notStrictEqual(results[0], results[1])
+    assert.notStrictEqual(results[1], results[2])
+    assert.notStrictEqual(results[2], results[0])
   })
 
   it("should reset all its listeners when the out signal is reset", function() {
     var a = sig()
     var b = sig()
     var s = sig.all([a, b])
-    a.targets.should.have.length(1)
-    b.targets.should.have.length(1)
+    assert.equal(a.targets.length, 1)
+    assert.equal(b.targets.length, 1)
+
     sig.reset(s)
-    a.targets.should.have.length(0)
-    b.targets.should.have.length(0)
+    assert(!a.targets.length)
+    assert(!b.targets.length)
   })
 
   it("should work with signals with non-empty buffers", function() {
@@ -675,7 +659,6 @@ describe("sig.all", function() {
     vv([a, b])
       (sig.all)
       (capture)
-      ()
-      .should.deep.equal([[1, 2]])
+      (assert.deepEqual, [[1, 2]])
   })
 })
