@@ -140,9 +140,10 @@
 
   function map(s, fn) {
     var t = sig()
+    var args = slice(arguments, 2)
 
     t.receiver = function(x, t) {
-      push(t, fn(x, t))
+      push(t, fn.apply(t, [x].concat(args)))
     }
 
     watch(t, s)
@@ -153,9 +154,10 @@
 
   function filter(s, fn) {
     var t = sig()
+    var args = slice(arguments, 2)
       
     t.receiver = function(x, t) {
-      if (fn(x, t)) push(t, x)
+      if (fn.apply(t, [x].concat(args))) push(t, x)
     }
 
     watch(t, s)
@@ -184,8 +186,9 @@
   }
 
 
-  function then(s, fn) {
-    return map(once(s), fn)
+  function then(s) {
+    s = once(s)
+    return map.apply(null, arguments)
   }
 
 
@@ -244,10 +247,7 @@
 
   function spread(fn) {
     return function(values) {
-      var args = arguments.length > 1
-        ? values.concat(Array.prototype.slice.call(arguments, 1))
-        : values
-      return fn.apply(fn, args)
+      return fn.apply(fn, values.concat(slice(arguments, 1)))
     }
   }
 
@@ -266,7 +266,7 @@
 
 
   function copy(obj) {
-    if (Array.isArray(obj)) return obj.slice()
+    if (Array.isArray(obj)) return slice(obj)
     var result = {}
     for (var k in obj) if (obj.hasOwnProperty(k)) result[k] = obj[k]
     return result
@@ -277,6 +277,13 @@
     var i = arr.indexOf(x)
     if (i < 0) return
     arr.splice(i, 1)
+  }
+
+
+  var _slice = Array.prototype.slice
+
+  function slice(arr, a, b) {
+    return _slice.call(arr, a, b)
   }
 
 

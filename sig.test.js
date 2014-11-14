@@ -276,21 +276,29 @@ describe("sig.map", function() {
       (sig.map, function(x) { results.push(x) })
 
     vv(s)
-     (sig.push, 1)
-     (sig.push, 2)
-     (sig.push, 3)
-     (sig.push, 4)
+      (sig.push, 1)
+      (sig.push, 2)
+      (sig.push, 3)
+      (sig.push, 4)
 
     results.should.deep.equal([3, 5, 7, 9])
   })
 
-  it("should provide the relevant stream to map functions", function(done) {
-    var s = sig()
-    var t = sig.map(s, function(x, u) {
-      u.should.equal(t)
-      done()
-    })
-    sig.push(s, 1)
+  it("should allow additional args", function() {
+    function fn(a, b, c) {
+      return [a, b, c]
+    }
+
+    vv([1, 2, 3, 4])
+      (sig)
+      (sig.map, fn, 23, 32)
+      (capture)
+      ()
+      .should.deep.equal([
+        [1, 23, 32],
+        [2, 23, 32],
+        [3, 23, 32],
+        [4, 23, 32]])
   })
 })
 
@@ -319,13 +327,17 @@ describe("sig.filter", function() {
     results.should.deep.equal([3, 5])
   })
 
-  it("should provide the relevant stream to filter functions", function(done) {
-    var s = sig()
-    var t = sig.filter(s, function(x, u) {
-      u.should.equal(t)
-      done()
-    })
-    sig.push(s, 1)
+  it("should allow additional args", function() {
+    function fn(a, b, c) {
+      return (a * b) % c
+    }
+
+    vv([1, 2, 3, 4])
+      (sig)
+      (sig.filter, fn, 3, 2)
+      (capture)
+      ()
+      .should.deep.equal([1, 3])
   })
 })
 
