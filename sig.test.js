@@ -388,21 +388,27 @@ describe("sig.once", function() {
 
 describe("sig.then", function() {
   it("should only map a signal's first output", function() {
-    var results = []
-    var s = sig()
+    vv([1, 2, 3, 4])
+      (sig)
+      (sig.then, function(x) {
+        return x + 1
+      })
+      (capture)
+      ()
+      .should.deep.equal([2])
+  })
 
-    vv(s)
-      (sig.then, function(x) { results.push(x) })
+  it("should allow additional args", function() {
+    function fn(a, b, c) {
+      return [a, b, c]
+    }
 
-    vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
-      (sig.push, 5)
-      (sig.push, 6)
-
-    results.should.deep.equal([1])
+    vv([1, 2, 3, 4])
+      (sig)
+      (sig.then, fn, 23, 32)
+      (capture)
+      ()
+      .should.deep.equal([[1, 23, 32]])
   })
 })
 

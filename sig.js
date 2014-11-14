@@ -31,10 +31,15 @@
       targets: [],
       buffer: obj,
       dependants: [],
-      receiver: noop
+      receiver: identityReceiver
     }
 
     return s
+  }
+
+
+  function identityReceiver(x, t) {
+    push(t, x)
   }
 
 
@@ -187,8 +192,11 @@
 
 
   function then(s) {
-    s = once(s)
-    return map.apply(null, arguments)
+    var t = once(sig())
+    var u = map.apply(null, [t].concat(slice(arguments, 1)))
+    watch(t, s)
+    resume(s)
+    return u
   }
 
 
@@ -285,9 +293,6 @@
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
   }
-
-
-  function noop() {}
 
 
   if (typeof module != 'undefined')
