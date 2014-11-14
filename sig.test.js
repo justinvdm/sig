@@ -329,44 +329,22 @@ describe("sig.filter", function() {
 
 describe("sig.limit", function() {
   it("should limit the given signal", function() {
-    var s = sig()
-
-    var results = vv(s)
+    vv([1, 2, 3, 4, 5, 6])
+      (sig)
       (sig.limit, 3)
       (capture)
-      ()
-
-    vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
-      (sig.push, 5)
-      (sig.push, 6)
-
-    assert.deepEqual(results, [1, 2, 3])
+      (assert.deepEqual, [1, 2, 3])
   })
 })
 
 
 describe("sig.once", function() {
   it("should limit a signal to its first output", function() {
-    var s = sig()
-
-    var results = vv(s)
+    vv([1, 2, 3, 4, 5, 6])
+      (sig)
       (sig.once)
       (capture)
-      ()
-
-    vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
-      (sig.push, 5)
-      (sig.push, 6)
-
-    assert.deepEqual(results, [1])
+      (assert.deepEqual, [1])
   })
 })
 

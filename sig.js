@@ -176,7 +176,7 @@
     var t = sig()
     
     t.receiver = function(x, t) {
-      if (++i > n) reset(t)
+      if (++i > n) unwatch(t, s)
       else push(t, x)
     }
 
@@ -192,11 +192,8 @@
 
 
   function then(s) {
-    var t = once(sig())
-    var u = map.apply(null, [t].concat(slice(arguments, 1)))
-    watch(t, s)
-    resume(s)
-    return u
+    s = once(s)
+    return map.apply(null, arguments)
   }
 
 
