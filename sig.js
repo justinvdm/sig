@@ -1,6 +1,11 @@
 ;(function() {
+  var nil = {}
+
+  isArray = Array.isArray
+
   sig.reset = reset
   sig.put = put
+  sig.putMany = putMany
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
@@ -18,23 +23,33 @@
   sig.depend = depend
   sig.undepend = undepend
   sig.isSig = isSig
+  sig.nil = nil
+  sig.sticky = sticky
 
 
   function sig(obj) {
     if (isSig(obj)) return obj
-    if (!arguments.length) obj = []
-    else if (!Array.isArray(obj)) obj = [obj]
 
     var s = {
       type: 'sig',
       paused: true,
+      sticky: false,
+      current: nil,
       sources: [],
       targets: [],
-      buffer: obj,
+      buffer: [],
       dependants: [],
       receiver: identityReceiver
     }
 
+    if (arguments.length) initialPut(s, obj)
+    return s
+  }
+
+
+  function initialPut(s, obj) {
+    if (isArray(obj)) putMany(s, obj)
+    else put(s, obj)
     return s
   }
 
@@ -57,9 +72,17 @@
 
 
   function watch(t, s) {
+    var current
+
     unwatch(t, s)
     s.targets.push(t)
     t.sources.push(s)
+
+    if (s.sticky) {
+      current = s.current
+      if (current !== nil) receive(t, current)
+    }
+
     return t
   }
 
@@ -97,9 +120,17 @@
 
 
   function put(s, x) {
-    return s.paused
-      ? buffer(s, x)
-      : send(s, x)
+    if (s.sticky) s.current = x
+    if (s.paused) buffer(s, x)
+    else send(s, x)
+    return s
+  }
+
+
+  function putMany(s, values) {
+    var n = values.length
+    var i = -1
+    while (++i < n) put(s, values[i])
   }
 
 
@@ -111,12 +142,14 @@
 
   function pause(s) {
     s.paused = true
+    return s
   }
 
 
   function resume(s) {
     s.paused = false
     flush(s)
+    return s
   }
 
 
@@ -126,6 +159,7 @@
     var n = buffer.length
     while (++i < n) send(s, buffer[i])
     s.buffer = []
+    return s
   }
 
 
@@ -250,6 +284,14 @@
     }
 
     return out
+  }
+
+
+  function sticky(obj) {
+    var s = sig()
+    s.sticky = true
+    if (arguments.length) initialPut(s, obj)
+    return s
   }
 
 

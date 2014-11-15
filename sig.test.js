@@ -663,3 +663,25 @@ describe("sig.ensure", function() {
       (assert.deepEqual, [[[1, 2], [3, 4]]])
   })
 })
+
+
+describe("sig.sticky", function() {
+  it("should hold onto the last value given to the signal", function() {
+    var s = sig.sticky([2])
+    sig.resume(s)
+
+    var c1 = capture(s)
+    assert.deepEqual(c1, [2])
+
+    sig.put(s, 3)
+    var c2 = capture(s)
+    assert.deepEqual(c1, [2, 3])
+    assert.deepEqual(c2, [3])
+
+    sig.put(s, 4)
+    var c3 = capture(s)
+    assert.deepEqual(c1, [2, 3, 4])
+    assert.deepEqual(c2, [3, 4])
+    assert.deepEqual(c3, [4])
+  })
+})
