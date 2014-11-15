@@ -11,6 +11,7 @@
   sig.limit = limit
   sig.once = once
   sig.then = then
+  sig.ensure = ensure
   sig.any = any
   sig.all = all
   sig.spread = spread
@@ -194,6 +195,13 @@
   function then(s) {
     s = once(s)
     return map.apply(null, arguments)
+  }
+
+
+  function ensure(v) {
+    return !isSig(v)
+      ? sig([v])
+      : v
   }
 
 

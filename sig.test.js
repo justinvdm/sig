@@ -640,3 +640,26 @@ describe("sig.all", function() {
       (assert.deepEqual, [[1, 2]])
   })
 })
+
+
+describe("sig.ensure", function() {
+  it("should simply pass through existing signals", function() {
+    vv([1, 2])
+      (sig)
+      (sig.ensure)
+      (capture)
+      (assert.deepEqual, [1, 2])
+  })
+
+  it("should create a singleton signal from non-signals", function() {
+    vv(23)
+      (sig.ensure)
+      (capture)
+      (assert.deepEqual, [23])
+
+    vv([[1, 2], [3, 4]])
+      (sig.ensure)
+      (capture)
+      (assert.deepEqual, [[[1, 2], [3, 4]]])
+  })
+})
