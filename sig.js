@@ -1,6 +1,6 @@
 ;(function() {
   sig.reset = reset
-  sig.push = push
+  sig.put = put
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
@@ -40,7 +40,7 @@
 
 
   function identityReceiver(x, t) {
-    push(t, x)
+    put(t, x)
   }
 
 
@@ -96,7 +96,7 @@
   }
 
 
-  function push(s, x) {
+  function put(s, x) {
     return s.paused
       ? buffer(s, x)
       : send(s, x)
@@ -149,7 +149,7 @@
     var args = slice(arguments, 2)
 
     t.receiver = function(x, t) {
-      push(t, fn.apply(t, [x].concat(args)))
+      put(t, fn.apply(t, [x].concat(args)))
     }
 
     watch(t, s)
@@ -163,7 +163,7 @@
     var args = slice(arguments, 2)
       
     t.receiver = function(x, t) {
-      if (fn.apply(t, [x].concat(args))) push(t, x)
+      if (fn.apply(t, [x].concat(args))) put(t, x)
     }
 
     watch(t, s)
@@ -178,7 +178,7 @@
     
     t.receiver = function(x, t) {
       if (++i > n) unwatch(t, s)
-      else push(t, x)
+      else put(t, x)
     }
 
     watch(t, s)
@@ -209,13 +209,13 @@
     var out = sig()
 
     each(values, function(s, k) {
-      if (!sig.isSig(s)) return
-      sig.depend(sig.map(s, pusher(k)), out)
+      if (!isSig(s)) return
+      depend(map(s, puts(k)), out)
     })
 
-    function pusher(k) {
+    function puts(k) {
       return function(x, t) {
-        sig.push(out, [x, k])
+        put(out, [x, k])
       }
     }
 
@@ -229,23 +229,23 @@
     values = copy(values)
 
     each(values, function(s, k) {
-      if (!sig.isSig(s)) return
+      if (!isSig(s)) return
       remaining[k] = true
     })
 
-    if (isEmpty(remaining)) sig.push(out, values)
+    if (isEmpty(remaining)) put(out, values)
     else each(values, watcher)
 
     function watcher(s, k) {
-      if (!sig.isSig(s)) return
-      sig.depend(sig.map(s, pusher(k)), out)
+      if (!isSig(s)) return
+      depend(map(s, puts(k)), out)
     }
 
-    function pusher(k) {
+    function puts(k) {
       return function(x, t) {
         delete remaining[k]
         values[k] = x
-        if (isEmpty(remaining)) sig.push(out, copy(values))
+        if (isEmpty(remaining)) put(out, copy(values))
       }
     }
 

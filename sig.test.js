@@ -20,7 +20,7 @@ describe("sig", function() {
     var s = sig()
 
     var t = sig()
-    t.receiver = function(x, t) { sig.push(t, x) }
+    t.receiver = function(x, t) { sig.put(t, x) }
 
     var u = sig()
     u.receiver = function(x) { results.push(x) }
@@ -28,7 +28,7 @@ describe("sig", function() {
     sig.watch(t, s)
     sig.watch(u, t)
 
-    sig.push(s, 1)
+    sig.put(s, 1)
     assert(!results.length)
 
     sig.resume(s)
@@ -37,18 +37,18 @@ describe("sig", function() {
     sig.resume(t)
     assert.deepEqual(results, [1])
 
-    sig.push(s, 2)
+    sig.put(s, 2)
     assert.deepEqual(results, [1, 2])
 
     sig.pause(t)
-    sig.push(s, 3)
+    sig.put(s, 3)
     assert.deepEqual(results, [1, 2])
 
     sig.resume(t)
     assert.deepEqual(results, [1, 2, 3])
 
     sig.pause(s)
-    sig.push(s, 4)
+    sig.put(s, 4)
 
     sig.resume(s)
     assert.deepEqual(results, [1, 2, 3, 4])
@@ -69,10 +69,10 @@ describe("sig", function() {
     sig.watch(t, s1)
     sig.watch(t, s2)
 
-    sig.push(s1, 1)
-    sig.push(s2, 2)
-    sig.push(s1, 3)
-    sig.push(s2, 4)
+    sig.put(s1, 1)
+    sig.put(s2, 2)
+    sig.put(s1, 3)
+    sig.put(s2, 4)
 
     assert.deepEqual(results, [1, 2, 3, 4])
   })
@@ -96,10 +96,10 @@ describe("sig", function() {
     sig.watch(t2, s)
 
     vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
+      (sig.put, 4)
 
     assert.deepEqual(results1, [1, 2, 3, 4])
     assert.deepEqual(results2, [1, 2, 3, 4])
@@ -121,10 +121,10 @@ describe("sig", function() {
     sig.watch(t, s2)
     sig.reset(t)
 
-    sig.push(s1, 1)
-    sig.push(s2, 2)
-    sig.push(s1, 3)
-    sig.push(s2, 4)
+    sig.put(s1, 1)
+    sig.put(s2, 2)
+    sig.put(s1, 3)
+    sig.put(s2, 4)
 
     assert(!results.length)
   })
@@ -135,10 +135,10 @@ describe("sig", function() {
     var s = sig()
 
     var t1 = sig()
-    t1.receiver = function(x) { results1.push(x) }
+    t1.receiver = function(x) { results1.put(x) }
 
     var t2 = sig()
-    t2.receiver = function(x) { results2.push(x) }
+    t2.receiver = function(x) { results2.put(x) }
 
     sig.resume(s)
     sig.resume(t1)
@@ -149,10 +149,10 @@ describe("sig", function() {
     sig.reset(s)
 
     vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
+      (sig.put, 4)
 
     assert(!results1.length)
     assert(!results2.length)
@@ -172,10 +172,10 @@ describe("sig", function() {
     sig.unwatch(t, s)
 
     vv(s)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
-      (sig.push, 4)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
+      (sig.put, 4)
 
     assert(!results.length)
   })
@@ -190,18 +190,18 @@ describe("sig", function() {
     sig.depend(u, t)
 
     vv(u)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
 
     assert.deepEqual(results, [1, 2, 3])
 
     sig.reset(s)
 
     vv(u)
-      (sig.push, 4)
-      (sig.push, 5)
-      (sig.push, 6)
+      (sig.put, 4)
+      (sig.put, 5)
+      (sig.put, 6)
 
     assert.deepEqual(results, [1, 2, 3])
   })
@@ -218,9 +218,9 @@ describe("sig", function() {
     sig.reset(s)
 
     vv(u)
-      (sig.push, 1)
-      (sig.push, 2)
-      (sig.push, 3)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
 
     assert.deepEqual(results, [1, 2, 3])
   })
@@ -418,16 +418,16 @@ describe("sig.any", function() {
 
     assert(!results.length)
 
-    sig.push(a, 1)
+    sig.put(a, 1)
     assert.deepEqual(results, [[1, 0]])
 
-    sig.push(b, 2)
+    sig.put(b, 2)
     assert.deepEqual(results, [[1, 0], [2, 1]])
 
-    sig.push(a, 3)
+    sig.put(a, 3)
     assert.deepEqual(results, [[1, 0], [2, 1], [3, 0]])
 
-    sig.push(b, 4)
+    sig.put(b, 4)
     assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
   })
   
@@ -446,16 +446,16 @@ describe("sig.any", function() {
 
     assert(!results.length)
 
-    sig.push(a, 1)
+    sig.put(a, 1)
     assert.deepEqual(results, [[1, 'a']])
 
-    sig.push(b, 2)
+    sig.put(b, 2)
     assert.deepEqual(results, [[1, 'a'], [2, 'b']])
 
-    sig.push(a, 3)
+    sig.put(a, 3)
     assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a']])
 
-    sig.push(b, 4)
+    sig.put(b, 4)
     assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
   })
 
@@ -507,16 +507,16 @@ describe("sig.all", function() {
 
     assert(!results.length)
 
-    sig.push(a, 1)
+    sig.put(a, 1)
     assert(!results.length)
 
-    sig.push(b, 2)
+    sig.put(b, 2)
     assert.deepEqual(results, [[1, 2, 23]])
 
-    sig.push(a, 3)
+    sig.put(a, 3)
     assert.deepEqual(results, [[1, 2, 23], [3, 2, 23]])
 
-    sig.push(b, 4)
+    sig.put(b, 4)
     assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
   })
   
@@ -535,11 +535,11 @@ describe("sig.all", function() {
 
     assert(!results.length)
 
-    sig.push(a, 1)
+    sig.put(a, 1)
 
     assert(!results.length)
 
-    sig.push(b, 2)
+    sig.put(b, 2)
 
     assert.deepEqual(results, [{
       a: 1,
@@ -547,7 +547,7 @@ describe("sig.all", function() {
       c: 23
     }])
 
-    sig.push(a, 3)
+    sig.put(a, 3)
 
     assert.deepEqual(results, [{
       a: 1,
@@ -559,7 +559,7 @@ describe("sig.all", function() {
       c: 23
     }])
 
-    sig.push(b, 4)
+    sig.put(b, 4)
 
     assert.deepEqual(results, [{
       a: 1,
@@ -584,9 +584,9 @@ describe("sig.all", function() {
       (capture)
       ()
 
-    sig.push(a, 1)
-    sig.push(a, 2)
-    sig.push(a, 3)
+    sig.put(a, 1)
+    sig.put(a, 2)
+    sig.put(a, 3)
 
     assert.equal(results.length, 3)
     assert.notStrictEqual(results[0], results[1])
@@ -605,9 +605,9 @@ describe("sig.all", function() {
       (capture)
       ()
 
-    sig.push(a, 1)
-    sig.push(a, 2)
-    sig.push(a, 3)
+    sig.put(a, 1)
+    sig.put(a, 2)
+    sig.put(a, 3)
 
     assert.equal(results.length, 3)
     assert.notStrictEqual(results[0], results[1])
@@ -629,10 +629,10 @@ describe("sig.all", function() {
 
   it("should work with signals with non-empty buffers", function() {
     var a = sig()
-    sig.push(a, 1)
+    sig.put(a, 1)
 
     var b = sig()
-    sig.push(b, 2)
+    sig.put(b, 2)
 
     vv([a, b])
       (sig.all)
