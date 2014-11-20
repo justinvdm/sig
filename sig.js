@@ -11,6 +11,8 @@
   sig.unwatch = unwatch
   sig.pause = pause
   sig.resume = resume
+  sig.raise = raise
+  sig.except = except
   sig.map = map
   sig.filter = filter
   sig.limit = limit
@@ -39,7 +41,8 @@
       targets: [],
       buffer: [],
       dependants: [],
-      receiver: identityReceiver
+      receiver: identityReceiver,
+      errorHandler: thrower
     }
 
     if (arguments.length) initialPut(s, obj)
@@ -135,7 +138,8 @@
 
 
   function receive(s, x) {
-    s.receiver(x, s)
+    try { s.receiver(x, s) }
+    catch (e) { raise(s, e) }
     return s
   }
 
@@ -150,6 +154,32 @@
     s.paused = false
     flush(s)
     return s
+  }
+
+
+  function raise(s, e) {
+    try { s.errorHandler(e, s) }
+    catch (e2) { propogateError(s, e2) }
+    return s
+  }
+
+
+  function propogateError(s, e) {
+    var targets = s.targets
+    var n = targets.length
+    if (!n) throw e
+
+    var i = -1
+    while (++i < n) raise(targets[i], e)
+    return s
+  }
+
+
+  function except(s, fn) {
+    var t = sig()
+    t.errorHandler = fn
+    watch(t, s)
+    return t
   }
 
 
@@ -339,6 +369,11 @@
 
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
+  }
+
+
+  function thrower(e) {
+    throw e
   }
 
 

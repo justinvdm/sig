@@ -15,6 +15,104 @@ function capture(s) {
 
 
 describe("sig", function() {
+  it("should support error handling", function(done) {
+    var s = sig()
+    var e = new Error(':/')
+
+    s.errorHandler = function(caughtErr) {
+      assert.strictEqual(caughtErr, e)
+      done()
+    }
+
+    sig.raise(s, e)
+  })
+
+  it("should throw unhandled errors", function() {
+    function thrower() {
+      sig.raise(sig(), new Error('o_O'))
+    }
+
+    assert.throws(thrower, /o_O/)
+  })
+
+  it("should allow handlers of ending signals to rethrow errors", function() {
+    var s = sig()
+
+    s.errorHandler = function(e) {
+      throw new Error(e + '!')
+    }
+
+    function thrower() {
+      sig.raise(s, new Error('o_O'))
+    }
+
+    assert.throws(thrower, /o_O/)
+  })
+
+  it("should allow handlers of ending signals to rethrow errors", function() {
+    var s = sig()
+
+    s.errorHandler = function(e) {
+      throw new Error(e + '!')
+    }
+
+    function thrower() {
+      sig.raise(s, new Error('o_O'))
+    }
+
+    assert.throws(thrower, /o_O!/)
+  })
+
+  it("should allow errors to propogate", function() {
+    var s1 = sig()
+    var s2 = sig()
+    var s3 = sig()
+    var s4 = sig()
+    var s3Err, s4Err
+
+    var e1 = new Error(':|')
+    var e2 = new Error('o_O')
+
+    sig.watch(s2, s1)
+    sig.watch(s3, s2)
+    sig.watch(s4, s2)
+
+    s1.errorHandler = function(caughtErr) {
+      if (caughtErr != ':|') throw caughtErr
+    }
+
+    s3.errorHandler = function(caughtErr) {
+      s3Err = caughtErr
+    }
+
+    s4.errorHandler = function(caughtErr) {
+      s4Err = caughtErr
+    }
+
+    sig.raise(s1, e1)
+    sig.raise(s1, e2)
+    assert.strictEqual(s3Err, e2)
+    assert.strictEqual(s4Err, e2)
+  })
+
+  it("should catch and raise errors thrown in receivers", function(done) {
+    var s = sig(null)
+    var t = sig()
+    var e = new Error('o_O')
+
+    t.receiver = function() {
+      throw e
+    }
+
+    t.errorHandler = function(caughtErr) {
+      assert.strictEqual(caughtErr, e)
+      done()
+    }
+
+    sig.watch(t, s)
+    sig.resume(s)
+  })
+
   it("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
@@ -271,6 +369,22 @@ describe("sig", function() {
       (sig)
       (capture)
       (assert.deepEqual, [23])
+  })
+})
+
+
+describe("sig.except", function(done) {
+  it("should create a signal that catches a given signals errors", function(done) {
+    var s = sig()
+    var e = new Error(':/')
+
+    var t = sig.except(s, function(caughtErr) {
+      assert.strictEqual(caughtErr, e)
+      done()
+    })
+
+    assert.notStrictEqual(t, s)
+    sig.raise(s, e)
   })
 })
 
