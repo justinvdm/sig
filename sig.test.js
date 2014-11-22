@@ -799,3 +799,13 @@ describe("sig.sticky", function() {
     assert.deepEqual(c3, [4])
   })
 })
+
+
+describe("sig.resolve", function() {
+  it("should put a single null value onto a signal", function() {
+    vv(sig())
+      (sig.resolve)
+      (capture)
+      (assert.deepEqual, [null])
+  })
+})

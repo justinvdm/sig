@@ -6,6 +6,7 @@
   sig.reset = reset
   sig.put = put
   sig.putMany = putMany
+  sig.resolve = resolve
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
@@ -136,6 +137,13 @@
     var n = values.length
     var i = -1
     while (++i < n) put(s, values[i])
+    return s
+  }
+
+
+  function resolve(s) {
+    put(s, null)
+    return s
   }
 
 
