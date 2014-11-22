@@ -32,20 +32,25 @@
   function sig(obj) {
     if (isSig(obj)) return obj
 
-    var s = {
+    var s = resetProps({
       type: 'sig',
-      paused: true,
       sticky: false,
-      current: nil,
-      sources: [],
-      targets: [],
-      buffer: [],
-      dependants: [],
       receiver: identityReceiver,
       errorHandler: thrower
-    }
+    })
 
     if (arguments.length) initialPut(s, obj)
+    return s
+  }
+
+
+  function resetProps(s) {
+    s.paused = true
+    s.current = nil
+    s.sources = []
+    s.targets = []
+    s.buffer = []
+    s.dependants = []
     return s
   }
 
@@ -66,10 +71,7 @@
     s.sources.forEach(function(source) { untarget(s, source) })
     s.targets.forEach(function(target) { unsource(target, s) })
     s.dependants.forEach(reset)
-    s.buffer = []
-    s.sources = []
-    s.targets = []
-    s.dependants = []
+    resetProps(s)
     return s
   }
 
