@@ -370,6 +370,26 @@ describe("sig", function() {
       (capture)
       (assert.deepEqual, [23])
   })
+
+  it("should support cleanup hooks", function() {
+    var results = []
+
+    var s = vv(sig())
+      (sig.cleanup, function() {
+        results.push(1)
+      })
+      (sig.cleanup, function() {
+        results.push(2)
+      })
+      (sig.cleanup, function() {
+        results.push(3)
+      })
+      ()
+
+    assert(!results.length)
+    sig.reset(s)
+    assert.deepEqual(results, [1, 2, 3])
+  })
 })
 
 

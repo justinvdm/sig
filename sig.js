@@ -12,6 +12,7 @@
   sig.unwatch = unwatch
   sig.pause = pause
   sig.resume = resume
+  sig.cleanup = cleanup
   sig.raise = raise
   sig.except = except
   sig.map = map
@@ -52,6 +53,7 @@
     s.targets = []
     s.buffer = []
     s.dependants = []
+    s.cleanups = []
     return s
   }
 
@@ -69,6 +71,7 @@
 
 
   function reset(s) {
+    s.cleanups.forEach(invoke)
     s.sources.forEach(function(source) { untarget(s, source) })
     s.targets.forEach(function(target) { unsource(target, s) })
     s.dependants.forEach(reset)
@@ -163,6 +166,12 @@
   function resume(s) {
     s.paused = false
     flush(s)
+    return s
+  }
+
+
+  function cleanup(s, fn) {
+    s.cleanups.push(fn)
     return s
   }
 
@@ -379,6 +388,11 @@
 
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
+  }
+
+
+  function invoke(fn) {
+    fn()
   }
 
 
