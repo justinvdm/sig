@@ -293,13 +293,20 @@
 
     each(values, function(s, k) {
       if (!isSig(s)) return
-      depend(map(s, puts(k)), out)
+      puts(s, k)
     })
 
-    function puts(k) {
-      return function(x, t) {
+    function puts(s, k) {
+      var t = map(s, function(x) {
         put(out, [x, k])
-      }
+      })
+
+      except(t, function(e) {
+        raise(out, e)
+      })
+
+      depend(t, out)
+      return t
     }
 
     return out
@@ -321,15 +328,22 @@
 
     function watcher(s, k) {
       if (!isSig(s)) return
-      depend(map(s, puts(k)), out)
+      puts(s, k)
     }
 
-    function puts(k) {
-      return function(x, t) {
+    function puts(s, k) {
+      var t = map(s, function(x) {
         delete remaining[k]
         values[k] = x
         if (isEmpty(remaining)) put(out, copy(values))
-      }
+      })
+
+      except(t, function(e) {
+        raise(out, e)
+      })
+
+      depend(t, out)
+      return t
     }
 
     return out

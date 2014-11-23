@@ -604,6 +604,25 @@ describe("sig.any", function() {
     assert(!a.targets.length)
     assert(!b.targets.length)
   })
+
+  it("should handle errors from its source signals", function() {
+    var results = []
+    var a = sig()
+    var b = sig()
+
+    vv([a, b])
+      (sig.any)
+      (sig.except, function(e) {
+        results.push(e.message)
+      })
+
+    sig.raise(a, new Error(':/'))
+    sig.raise(b, new Error(':|'))
+    sig.raise(a, new Error('o_O'))
+    sig.raise(b, new Error('-_-'))
+    
+    assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+  })
 })
 
 
@@ -772,6 +791,25 @@ describe("sig.all", function() {
       (sig.all)
       (capture)
       (assert.deepEqual, [[1, 2]])
+  })
+
+  it("should handle errors from its source signals", function() {
+    var results = []
+    var a = sig()
+    var b = sig()
+
+    vv([a, b])
+      (sig.all)
+      (sig.except, function(e) {
+        results.push(e.message)
+      })
+
+    sig.raise(a, new Error(':/'))
+    sig.raise(b, new Error(':|'))
+    sig.raise(a, new Error('o_O'))
+    sig.raise(b, new Error('-_-'))
+    
+    assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
   })
 })
 
