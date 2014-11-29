@@ -340,7 +340,7 @@
   }
 
 
-  function any(values) {
+  function any(values, fn) {
     return sig(function() {
       var out = sig()
 
@@ -358,10 +358,11 @@
   }
 
 
-  function all(values) {
+  function all(values, fn) {
     return sig(function() {
       var out = sig()
       var remaining = {}
+      var isArgs = isArguments(values)
       values = copy(values)
 
       each(values, function(s, k) {
@@ -383,7 +384,10 @@
         if (isEmpty(remaining)) put(out, copy(values))
       }
 
-      return out
+      if (!fn) return out
+      return isArgs
+        ? map(out, spread(fn))
+        : map(out, fn)
     })
   }
 
@@ -422,7 +426,7 @@
 
 
   function copy(obj) {
-    if (Array.isArray(obj)) return slice(obj)
+    if (isArray(obj) || isArguments(obj)) return slice(obj)
     var result = {}
     for (var k in obj) if (obj.hasOwnProperty(k)) result[k] = obj[k]
     return result
@@ -450,6 +454,13 @@
 
   function thrower(e) {
     throw e
+  }
+
+
+  function isArguments( obj ) {
+    return typeof obj == 'object'
+        && typeof obj.length == 'number'
+        && 'callee' in obj
   }
 
 
