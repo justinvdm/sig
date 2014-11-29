@@ -341,64 +341,50 @@
 
 
   function any(values) {
-    var out = sig()
+    return sig(function() {
+      var out = sig()
 
-    each(values, function(s, k) {
-      if (!isSig(s)) return
-      puts(s, k)
-    })
+      each(values, function(s, k) {
+        if (!isSig(s)) return
+        map(s, puts, k)
+      })
 
-    function puts(s, k) {
-      var t = map(s, function(x) {
+      function puts(x, k) {
         put(out, [x, k])
-      })
+      }
 
-      except(t, function(e) {
-        raise(out, e)
-      })
-
-      depend(t, out)
-      return t
-    }
-
-    return out
+      return out
+    })
   }
 
 
   function all(values) {
-    var out = sig()
-    var remaining = {}
-    values = copy(values)
+    return sig(function() {
+      var out = sig()
+      var remaining = {}
+      values = copy(values)
 
-    each(values, function(s, k) {
-      if (!isSig(s)) return
-      remaining[k] = true
-    })
+      each(values, function(s, k) {
+        if (!isSig(s)) return
+        remaining[k] = true
+      })
 
-    if (isEmpty(remaining)) put(out, values)
-    else each(values, watcher)
+      if (isEmpty(remaining)) put(out, values)
+      else each(values, watcher)
 
-    function watcher(s, k) {
-      if (!isSig(s)) return
-      puts(s, k)
-    }
+      function watcher(s, k) {
+        if (!isSig(s)) return
+        map(s, puts, k)
+      }
 
-    function puts(s, k) {
-      var t = map(s, function(x) {
+      function puts(x, k) {
         delete remaining[k]
         values[k] = x
         if (isEmpty(remaining)) put(out, copy(values))
-      })
+      }
 
-      except(t, function(e) {
-        raise(out, e)
-      })
-
-      depend(t, out)
-      return t
-    }
-
-    return out
+      return out
+    })
   }
 
 
