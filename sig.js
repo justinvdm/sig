@@ -136,10 +136,10 @@
   }
 
 
-  function putMany(s, values) {
-    var n = values.length
+  function putMany(s, stickyues) {
+    var n = stickyues.length
     var i = -1
-    while (++i < n) put(s, values[i])
+    while (++i < n) put(s, stickyues[i])
     return s
   }
 
@@ -288,10 +288,10 @@
   }
 
 
-  function any(values) {
+  function any(stickyues) {
     var out = sig()
 
-    each(values, function(s, k) {
+    each(stickyues, function(s, k) {
       if (!isSig(s)) return
       puts(s, k)
     })
@@ -313,18 +313,18 @@
   }
 
 
-  function all(values) {
+  function all(stickyues) {
     var out = sig()
     var remaining = {}
-    values = copy(values)
+    stickyues = copy(stickyues)
 
-    each(values, function(s, k) {
+    each(stickyues, function(s, k) {
       if (!isSig(s)) return
       remaining[k] = true
     })
 
-    if (isEmpty(remaining)) put(out, values)
-    else each(values, watcher)
+    if (isEmpty(remaining)) put(out, stickyues)
+    else each(stickyues, watcher)
 
     function watcher(s, k) {
       if (!isSig(s)) return
@@ -334,8 +334,8 @@
     function puts(s, k) {
       var t = map(s, function(x) {
         delete remaining[k]
-        values[k] = x
-        if (isEmpty(remaining)) put(out, copy(values))
+        stickyues[k] = x
+        if (isEmpty(remaining)) put(out, copy(stickyues))
       })
 
       except(t, function(e) {
@@ -350,10 +350,10 @@
   }
 
 
-  function sticky(obj) {
+  function sticky(v) {
     var s = sig()
     s.sticky = true
-    if (arguments.length) initialPut(s, obj)
+    if (arguments.length) initialPut(s, [v])
     return s
   }
 
@@ -364,8 +364,8 @@
 
 
   function spread(fn) {
-    return function(values) {
-      return fn.apply(fn, values.concat(slice(arguments, 1)))
+    return function(stickyues) {
+      return fn.apply(fn, stickyues.concat(slice(arguments, 1)))
     }
   }
 

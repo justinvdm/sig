@@ -364,13 +364,6 @@ describe("sig", function() {
       (assert.deepEqual, [1, 2, 3, 4])
   })
 
-  it("should create a signal from a single value", function() {
-    vv(23)
-      (sig)
-      (capture)
-      (assert.deepEqual, [23])
-  })
-
   it("should support cleanup hooks", function() {
     var results = []
 
@@ -838,8 +831,8 @@ describe("sig.ensure", function() {
 
 
 describe("sig.sticky", function() {
-  it("should hold onto the last value given to the signal", function() {
-    var s = sig.sticky([2])
+  it("should hold onto the last stickyue given to the signal", function() {
+    var s = sig.sticky(2)
     sig.resume(s)
 
     var c1 = capture(s)
@@ -860,7 +853,7 @@ describe("sig.sticky", function() {
 
 
 describe("sig.resolve", function() {
-  it("should put a single null value onto a signal", function() {
+  it("should put a single null stickyue onto a signal", function() {
     vv(sig())
       (sig.resolve)
       (capture)
