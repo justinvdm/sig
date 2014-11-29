@@ -830,9 +830,9 @@ describe("sig.ensure", function() {
 })
 
 
-describe("sig.sticky", function() {
-  it("should hold onto the last stickyue given to the signal", function() {
-    var s = sig.sticky(2)
+describe("sig.val", function() {
+  it("should hold onto the last value given to the signal", function() {
+    var s = sig.val(2)
     sig.resume(s)
 
     var c1 = capture(s)
@@ -853,7 +853,7 @@ describe("sig.sticky", function() {
 
 
 describe("sig.resolve", function() {
-  it("should put a single null stickyue onto a signal", function() {
+  it("should put a single null value onto a signal", function() {
     vv(sig())
       (sig.resolve)
       (capture)
