@@ -1,5 +1,7 @@
 ;(function() {
   var nil = {}
+  var scopes = []
+  var currentScope
 
   isArray = Array.isArray
 
@@ -33,6 +35,7 @@
 
   function sig(obj) {
     if (isSig(obj)) return obj
+    if (typeof obj == 'function') return gen(obj)
 
     var s = resetProps({
       type: 'sig',
@@ -41,6 +44,7 @@
       errorHandler: thrower
     })
 
+    updateScope(s)
     if (arguments.length) initialPut(s, obj)
     return s
   }
@@ -67,6 +71,54 @@
 
   function identityReceiver(x, t) {
     put(t, x)
+  }
+
+
+  function pushScope() {
+    var scope = []
+    currentScope = scope
+    scopes.push(scope)
+    return scope
+  }
+
+
+  function popScope() {
+    var scope = scopes.pop()
+    currentScope = scopes[scopes.length - 1]
+    return scope
+  }
+
+
+  function updateScope(s) {
+    var scope = currentScope
+    if (!scope) return
+    scope.push(s)
+    return s
+  }
+
+
+  function gen(fn) {
+    var scope = pushScope()
+    var s = fn()
+    popScope()
+    updateScope(s)
+
+    var n = scope.length
+    var i = -1
+    var t
+
+    while (++i < n) {
+      t = scope[i]
+      if (t === s) continue
+      depend(t, s)
+      if (!t.targets.length) except(t, raises)
+    }
+
+    function raises(e) {
+      raise(s, e)
+    }
+
+    return s
   }
 
 

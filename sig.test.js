@@ -14,6 +14,13 @@ function capture(s) {
 }
 
 
+function contains(arr, values) {
+  return !!values.some(function(v) {
+    return arr.indexOf(v) > -1
+  })
+}
+
+
 describe("sig", function() {
   it("should support error handling", function(done) {
     var s = sig()
@@ -382,6 +389,103 @@ describe("sig", function() {
     assert(!results.length)
     sig.reset(s)
     assert.deepEqual(results, [1, 2, 3])
+  })
+})
+
+
+describe("sig:generators", function() {
+  it("should make the scoped signals depend on the returned signal", function() {
+    var innerA
+    var innerB
+    var innerC
+
+    sig()
+    sig()
+    sig()
+
+    var s = sig(function() {
+      var s = sig()
+      innerA = sig()
+      innerB = sig()
+      innerC = sig()
+      return s
+    })
+
+    assert(contains(s.dependants, [innerA, innerB, innerC]))
+  })
+
+  it("should support nested generators", function() {
+    var a, b, c, a1, a2, b1, b2, c1, c2
+
+    a = sig(function() {
+      a1 = sig()
+      a2 = sig()
+
+      b = sig(function() {
+        b1 = sig()
+        b2 = sig()
+
+        c = sig(function() {
+          c1 = sig()
+          c2 = sig()
+
+          return sig()
+        })
+
+        return sig()
+      })
+
+      return sig()
+    })
+
+    assert(contains(a.dependants, [b]))
+    assert(contains(a.dependants, [a1, a2]))
+    assert(!contains(a.dependants, [b1, b2]))
+    assert(!contains(a.dependants, [c1, c2]))
+    assert(!contains(a.dependants, [c]))
+
+    assert(contains(b.dependants, [c]))
+    assert(contains(b.dependants, [b1, b2]))
+    assert(!contains(b.dependants, [a1, a2]))
+    assert(!contains(b.dependants, [c1, c2]))
+    assert(!contains(b.dependants, [a]))
+
+    assert(contains(c.dependants, [c1, c2]))
+    assert(!contains(c.dependants, [a1, a2]))
+    assert(!contains(c.dependants, [b1, b2]))
+    assert(!contains(c.dependants, [a, b]))
+  })
+
+  it("should redirect unhandled errors to the returned signal", function() {
+    var outer = sig()
+    var results = []
+
+    vv(function() {
+        var s = sig()
+
+        sig.map(outer, function(i) {
+          if (i % 2) throw new Error('o_O')
+        })
+
+        sig.map(outer, function(i) {
+          if (i % 2) return
+          throw new Error(':/')
+        })
+
+        return s
+      })
+      (sig)
+      (sig.except, function(e) {
+        results.push(e.message)
+      })
+
+    vv(outer)
+      (sig.put, 1)
+      (sig.put, 2)
+      (sig.put, 3)
+      (sig.put, 4)
+
+    assert.deepEqual(results, ['o_O', ':/', 'o_O', ':/'])
   })
 })
 
