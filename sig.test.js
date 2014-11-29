@@ -718,6 +718,26 @@ describe("sig", function() {
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
+
+    it("should support an up-front map function", function() {
+      vv([1, 2].map(sig.ensure))
+        (sig.any, function(v, i) {
+          return [v + 1, i]
+        })
+        (capture)
+        (assert.deepEqual, [[2, 0], [3, 1]])
+    })
+
+    it("should support argument objects", function() {
+      function test() {
+        vv(arguments)
+          (sig.any)
+          (capture)
+          (assert.deepEqual, [[1, 0], [2, 1]])
+      }
+
+      test(sig.ensure(1), sig.ensure(2))
+    })
   })
 
 
@@ -917,6 +937,8 @@ describe("sig", function() {
     })
 
     it("should spread out arguments if an arguments object is given", function() {
+      test(21, 22, 23)
+
       function test() {
         vv(arguments)
           (sig.all, function(a, b, c) {
@@ -925,8 +947,6 @@ describe("sig", function() {
           (capture)
           (assert.deepEqual, [[22, 23, 24]])
       }
-
-      test(21, 22, 23)
     })
   })
 

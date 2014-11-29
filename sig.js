@@ -343,6 +343,7 @@
   function any(values, fn) {
     return sig(function() {
       var out = sig()
+      if (isArguments(values)) values = slice(values)
 
       each(values, function(s, k) {
         if (!isSig(s)) return
@@ -353,7 +354,9 @@
         put(out, [x, k])
       }
 
-      return out
+      return fn
+        ? map(out, spread(fn))
+        : out
     })
   }
 
