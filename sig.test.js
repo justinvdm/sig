@@ -390,44 +390,45 @@ describe("sig", function() {
     sig.reset(s)
     assert.deepEqual(results, [1, 2, 3])
   })
-})
 
+  describe("generators", function() {
+    it("should make the scoped signals depend on the returned signal", function() {
+      var innerA
+      var innerB
+      var innerC
 
-describe("sig:generators", function() {
-  it("should make the scoped signals depend on the returned signal", function() {
-    var innerA
-    var innerB
-    var innerC
+      sig()
+      sig()
+      sig()
 
-    sig()
-    sig()
-    sig()
+      var s = sig(function() {
+        var s = sig()
+        innerA = sig()
+        innerB = sig()
+        innerC = sig()
+        return s
+      })
 
-    var s = sig(function() {
-      var s = sig()
-      innerA = sig()
-      innerB = sig()
-      innerC = sig()
-      return s
+      assert(contains(s.dependants, [innerA, innerB, innerC]))
     })
 
-    assert(contains(s.dependants, [innerA, innerB, innerC]))
-  })
+    it("should support nested generators", function() {
+      var a, b, c, a1, a2, b1, b2, c1, c2
 
-  it("should support nested generators", function() {
-    var a, b, c, a1, a2, b1, b2, c1, c2
+      a = sig(function() {
+        a1 = sig()
+        a2 = sig()
 
-    a = sig(function() {
-      a1 = sig()
-      a2 = sig()
+        b = sig(function() {
+          b1 = sig()
+          b2 = sig()
 
-      b = sig(function() {
-        b1 = sig()
-        b2 = sig()
+          c = sig(function() {
+            c1 = sig()
+            c2 = sig()
 
-        c = sig(function() {
-          c1 = sig()
-          c2 = sig()
+            return sig()
+          })
 
           return sig()
         })
@@ -435,532 +436,530 @@ describe("sig:generators", function() {
         return sig()
       })
 
-      return sig()
+      assert(contains(a.dependants, [b]))
+      assert(contains(a.dependants, [a1, a2]))
+      assert(!contains(a.dependants, [b1, b2]))
+      assert(!contains(a.dependants, [c1, c2]))
+      assert(!contains(a.dependants, [c]))
+
+      assert(contains(b.dependants, [c]))
+      assert(contains(b.dependants, [b1, b2]))
+      assert(!contains(b.dependants, [a1, a2]))
+      assert(!contains(b.dependants, [c1, c2]))
+      assert(!contains(b.dependants, [a]))
+
+      assert(contains(c.dependants, [c1, c2]))
+      assert(!contains(c.dependants, [a1, a2]))
+      assert(!contains(c.dependants, [b1, b2]))
+      assert(!contains(c.dependants, [a, b]))
     })
 
-    assert(contains(a.dependants, [b]))
-    assert(contains(a.dependants, [a1, a2]))
-    assert(!contains(a.dependants, [b1, b2]))
-    assert(!contains(a.dependants, [c1, c2]))
-    assert(!contains(a.dependants, [c]))
+    it("should redirect unhandled errors to the returned signal", function() {
+      var outer = sig()
+      var results = []
 
-    assert(contains(b.dependants, [c]))
-    assert(contains(b.dependants, [b1, b2]))
-    assert(!contains(b.dependants, [a1, a2]))
-    assert(!contains(b.dependants, [c1, c2]))
-    assert(!contains(b.dependants, [a]))
+      vv(function() {
+          var s = sig()
 
-    assert(contains(c.dependants, [c1, c2]))
-    assert(!contains(c.dependants, [a1, a2]))
-    assert(!contains(c.dependants, [b1, b2]))
-    assert(!contains(c.dependants, [a, b]))
-  })
+          sig.map(outer, function(i) {
+            if (i % 2) throw new Error('o_O')
+          })
 
-  it("should redirect unhandled errors to the returned signal", function() {
-    var outer = sig()
-    var results = []
+          sig.map(outer, function(i) {
+            if (i % 2) return
+            throw new Error(':/')
+          })
 
-    vv(function() {
-        var s = sig()
-
-        sig.map(outer, function(i) {
-          if (i % 2) throw new Error('o_O')
+          return s
+        })
+        (sig)
+        (sig.except, function(e) {
+          results.push(e.message)
         })
 
-        sig.map(outer, function(i) {
-          if (i % 2) return
-          throw new Error(':/')
+      vv(outer)
+        (sig.put, 1)
+        (sig.put, 2)
+        (sig.put, 3)
+        (sig.put, 4)
+
+      assert.deepEqual(results, ['o_O', ':/', 'o_O', ':/'])
+    })
+  })
+
+
+  describe(".except", function(done) {
+    it("should create a signal that catches a given signals errors", function(done) {
+      var s = sig()
+      var e = new Error(':/')
+
+      var t = sig.except(s, function(caughtErr) {
+        assert.strictEqual(caughtErr, e)
+        done()
+      })
+
+      assert.notStrictEqual(t, s)
+      sig.raise(s, e)
+    })
+  })
+
+
+  describe(".map", function() {
+    it("should map the given signal", function() {
+      vv([1, 2, 3, 4])
+        (sig)
+        (sig.map, function(x) { return x * 2 })
+        (sig.map, function(x) { return x + 1 })
+        (capture)
+        (assert.deepEqual, [3, 5, 7, 9])
+    })
+
+    it("should allow additional args", function() {
+      function fn(a, b, c) {
+        return [a, b, c]
+      }
+
+      vv([1, 2, 3, 4])
+        (sig)
+        (sig.map, fn, 23, 32)
+        (capture)
+        (assert.deepEqual, [
+          [1, 23, 32],
+          [2, 23, 32],
+          [3, 23, 32],
+          [4, 23, 32]])
+    })
+  })
+
+
+  describe(".filter", function() {
+    it("should filter the given signal", function() {
+      vv([2, 3, 4, 5, 6, 11, 12, 15, 16])
+        (sig)
+        (sig.filter, function(x) { return x % 2 })
+        (sig.filter, function(x) { return x < 10 })
+        (capture)
+        (assert.deepEqual, [3, 5])
+    })
+
+    it("should allow additional args", function() {
+      function fn(a, b, c) {
+        return (a * b) % c
+      }
+
+      vv([1, 2, 3, 4])
+        (sig)
+        (sig.filter, fn, 3, 2)
+        (capture)
+        (assert.deepEqual, [1, 3])
+    })
+  })
+
+
+  describe(".limit", function() {
+    it("should limit the given signal", function() {
+      vv([1, 2, 3, 4, 5, 6])
+        (sig)
+        (sig.limit, 3)
+        (capture)
+        (assert.deepEqual, [1, 2, 3])
+    })
+  })
+
+
+  describe(".once", function() {
+    it("should limit a signal to its first output", function() {
+      vv([1, 2, 3, 4, 5, 6])
+        (sig)
+        (sig.once)
+        (capture)
+        (assert.deepEqual, [1])
+    })
+  })
+
+
+  describe(".then", function() {
+    it("should only map a signal's first output", function() {
+      vv([1, 2, 3, 4])
+        (sig)
+        (sig.then, function(x) {
+          return x + 1
         })
-
-        return s
-      })
-      (sig)
-      (sig.except, function(e) {
-        results.push(e.message)
-      })
-
-    vv(outer)
-      (sig.put, 1)
-      (sig.put, 2)
-      (sig.put, 3)
-      (sig.put, 4)
-
-    assert.deepEqual(results, ['o_O', ':/', 'o_O', ':/'])
-  })
-})
-
-
-describe("sig.except", function(done) {
-  it("should create a signal that catches a given signals errors", function(done) {
-    var s = sig()
-    var e = new Error(':/')
-
-    var t = sig.except(s, function(caughtErr) {
-      assert.strictEqual(caughtErr, e)
-      done()
+        (capture)
+        (assert.deepEqual, [2])
     })
 
-    assert.notStrictEqual(t, s)
-    sig.raise(s, e)
-  })
-})
+    it("should allow additional args", function() {
+      function fn(a, b, c) {
+        return [a, b, c]
+      }
 
-
-describe("sig.map", function() {
-  it("should map the given signal", function() {
-    vv([1, 2, 3, 4])
-      (sig)
-      (sig.map, function(x) { return x * 2 })
-      (sig.map, function(x) { return x + 1 })
-      (capture)
-      (assert.deepEqual, [3, 5, 7, 9])
+      vv([1, 2, 3, 4])
+        (sig)
+        (sig.then, fn, 23, 32)
+        (capture)
+        (assert.deepEqual, [[1, 23, 32]])
+    })
   })
 
-  it("should allow additional args", function() {
-    function fn(a, b, c) {
-      return [a, b, c]
-    }
 
-    vv([1, 2, 3, 4])
-      (sig)
-      (sig.map, fn, 23, 32)
-      (capture)
-      (assert.deepEqual, [
-        [1, 23, 32],
-        [2, 23, 32],
-        [3, 23, 32],
-        [4, 23, 32]])
-  })
-})
-
-
-describe("sig.filter", function() {
-  it("should filter the given signal", function() {
-    vv([2, 3, 4, 5, 6, 11, 12, 15, 16])
-      (sig)
-      (sig.filter, function(x) { return x % 2 })
-      (sig.filter, function(x) { return x < 10 })
-      (capture)
-      (assert.deepEqual, [3, 5])
+  describe(".isSig", function() {
+    it("should determine whether something is a signal", function() {
+      assert(!sig.isSig(void 0))
+      assert(!sig.isSig(null))
+      assert(!sig.isSig({}))
+      assert(sig.isSig(sig()))
+    })
   })
 
-  it("should allow additional args", function() {
-    function fn(a, b, c) {
-      return (a * b) % c
-    }
 
-    vv([1, 2, 3, 4])
-      (sig)
-      (sig.filter, fn, 3, 2)
-      (capture)
-      (assert.deepEqual, [1, 3])
-  })
-})
-
-
-describe("sig.limit", function() {
-  it("should limit the given signal", function() {
-    vv([1, 2, 3, 4, 5, 6])
-      (sig)
-      (sig.limit, 3)
-      (capture)
-      (assert.deepEqual, [1, 2, 3])
-  })
-})
-
-
-describe("sig.once", function() {
-  it("should limit a signal to its first output", function() {
-    vv([1, 2, 3, 4, 5, 6])
-      (sig)
-      (sig.once)
-      (capture)
-      (assert.deepEqual, [1])
-  })
-})
-
-
-describe("sig.then", function() {
-  it("should only map a signal's first output", function() {
-    vv([1, 2, 3, 4])
-      (sig)
-      (sig.then, function(x) {
-        return x + 1
-      })
-      (capture)
-      (assert.deepEqual, [2])
-  })
-
-  it("should allow additional args", function() {
-    function fn(a, b, c) {
-      return [a, b, c]
-    }
-
-    vv([1, 2, 3, 4])
-      (sig)
-      (sig.then, fn, 23, 32)
-      (capture)
-      (assert.deepEqual, [[1, 23, 32]])
-  })
-})
-
-
-describe("sig.isSig", function() {
-  it("should determine whether something is a signal", function() {
-    assert(!sig.isSig(void 0))
-    assert(!sig.isSig(null))
-    assert(!sig.isSig({}))
-    assert(sig.isSig(sig()))
-  })
-})
-
-
-describe("sig.spread", function() {
-  it("should spread an array out as a function's arguments", function() {
-    vv([1, 2, 3])
-      (sig.spread(function(a, b, c) {
-        return [a + 1, b + 1, c + 1]
-      }))
-      (sig.spread(function(a, b, c) {
-        return [a * 2, b * 2, c * 2]
-      }))
-      (assert.deepEqual, [4, 6, 8])
-  })
-
-  it("should append additional args", function() {
-    var fn = sig.spread(function(a, b, c, d) {
-      return [a, b, c, d]
+  describe(".spread", function() {
+    it("should spread an array out as a function's arguments", function() {
+      vv([1, 2, 3])
+        (sig.spread(function(a, b, c) {
+          return [a + 1, b + 1, c + 1]
+        }))
+        (sig.spread(function(a, b, c) {
+          return [a * 2, b * 2, c * 2]
+        }))
+        (assert.deepEqual, [4, 6, 8])
     })
 
-    assert.deepEqual(fn([1, 2], 3, 4), [1, 2, 3, 4])
-  })
-})
-
-
-describe("sig.any", function() {
-  it("should support arrays with both signals and non-signals", function() {
-    var a = sig()
-    var b = sig()
-
-    var results = vv([a, b, 23])
-      (sig.any)
-      (capture)
-      ()
-
-    assert(!results.length)
-
-    sig.put(a, 1)
-    assert.deepEqual(results, [[1, 0]])
-
-    sig.put(b, 2)
-    assert.deepEqual(results, [[1, 0], [2, 1]])
-
-    sig.put(a, 3)
-    assert.deepEqual(results, [[1, 0], [2, 1], [3, 0]])
-
-    sig.put(b, 4)
-    assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
-  })
-  
-  it("should support objects with both signals and non-signals", function() {
-    var a = sig()
-    var b = sig()
-
-    var results = vv({
-        a: a,
-        b: b,
-        c: 23
-      })
-      (sig.any)
-      (capture)
-      ()
-
-    assert(!results.length)
-
-    sig.put(a, 1)
-    assert.deepEqual(results, [[1, 'a']])
-
-    sig.put(b, 2)
-    assert.deepEqual(results, [[1, 'a'], [2, 'b']])
-
-    sig.put(a, 3)
-    assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a']])
-
-    sig.put(b, 4)
-    assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
-  })
-
-  it("should reset all its listeners when the out signal is reset", function() {
-    var a = sig()
-    var b = sig()
-    var s = sig.any([a, b])
-    assert.equal(a.targets.length, 1)
-    assert.equal(b.targets.length, 1)
-
-    sig.reset(s)
-    assert(!a.targets.length)
-    assert(!b.targets.length)
-  })
-
-  it("should handle errors from its source signals", function() {
-    var results = []
-    var a = sig()
-    var b = sig()
-
-    vv([a, b])
-      (sig.any)
-      (sig.except, function(e) {
-        results.push(e.message)
+    it("should append additional args", function() {
+      var fn = sig.spread(function(a, b, c, d) {
+        return [a, b, c, d]
       })
 
-    sig.raise(a, new Error(':/'))
-    sig.raise(b, new Error(':|'))
-    sig.raise(a, new Error('o_O'))
-    sig.raise(b, new Error('-_-'))
+      assert.deepEqual(fn([1, 2], 3, 4), [1, 2, 3, 4])
+    })
+  })
+
+
+  describe(".any", function() {
+    it("should support arrays with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv([a, b, 23])
+        (sig.any)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      sig.put(a, 1)
+      assert.deepEqual(results, [[1, 0]])
+
+      sig.put(b, 2)
+      assert.deepEqual(results, [[1, 0], [2, 1]])
+
+      sig.put(a, 3)
+      assert.deepEqual(results, [[1, 0], [2, 1], [3, 0]])
+
+      sig.put(b, 4)
+      assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
+    })
     
-    assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    it("should support objects with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv({
+          a: a,
+          b: b,
+          c: 23
+        })
+        (sig.any)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      sig.put(a, 1)
+      assert.deepEqual(results, [[1, 'a']])
+
+      sig.put(b, 2)
+      assert.deepEqual(results, [[1, 'a'], [2, 'b']])
+
+      sig.put(a, 3)
+      assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a']])
+
+      sig.put(b, 4)
+      assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
+    })
+
+    it("should reset all its listeners when the out signal is reset", function() {
+      var a = sig()
+      var b = sig()
+      var s = sig.any([a, b])
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
+
+      sig.reset(s)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
+    })
+
+    it("should handle errors from its source signals", function() {
+      var results = []
+      var a = sig()
+      var b = sig()
+
+      vv([a, b])
+        (sig.any)
+        (sig.except, function(e) {
+          results.push(e.message)
+        })
+
+      sig.raise(a, new Error(':/'))
+      sig.raise(b, new Error(':|'))
+      sig.raise(a, new Error('o_O'))
+      sig.raise(b, new Error('-_-'))
+      
+      assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    })
   })
-})
 
 
-describe("sig.all", function() {
-  it("should support arrays with only non signals", function() {
-    vv([21, 22, 23])
-     (sig.all)
-     (capture)
-     (assert.deepEqual, [[21, 22, 23]])
-  })
+  describe(".all", function() {
+    it("should support arrays with only non signals", function() {
+      vv([21, 22, 23])
+       (sig.all)
+       (capture)
+       (assert.deepEqual, [[21, 22, 23]])
+    })
 
-  it("should support objects with only non signals", function() {
-    vv({
-       a: 21,
-       b: 22,
-       c: 23
-      })
-      (sig.all)
-      (capture)
-      (assert.deepEqual, [{
-        a: 21,
-        b: 22,
+    it("should support objects with only non signals", function() {
+      vv({
+         a: 21,
+         b: 22,
+         c: 23
+        })
+        (sig.all)
+        (capture)
+        (assert.deepEqual, [{
+          a: 21,
+          b: 22,
+          c: 23
+        }])
+    })
+
+    it("should support arrays with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv([a, b, 23])
+        (sig.all)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      sig.put(a, 1)
+      assert(!results.length)
+
+      sig.put(b, 2)
+      assert.deepEqual(results, [[1, 2, 23]])
+
+      sig.put(a, 3)
+      assert.deepEqual(results, [[1, 2, 23], [3, 2, 23]])
+
+      sig.put(b, 4)
+      assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
+    })
+    
+    it("should support objects with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv({
+          a: a,
+          b: b,
+          c: 23 
+        })
+        (sig.all)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      sig.put(a, 1)
+
+      assert(!results.length)
+
+      sig.put(b, 2)
+
+      assert.deepEqual(results, [{
+        a: 1,
+        b: 2,
         c: 23
       }])
+
+      sig.put(a, 3)
+
+      assert.deepEqual(results, [{
+        a: 1,
+        b: 2,
+        c: 23
+      }, {
+        a: 3,
+        b: 2,
+        c: 23
+      }])
+
+      sig.put(b, 4)
+
+      assert.deepEqual(results, [{
+        a: 1,
+        b: 2,
+        c: 23
+      }, {
+        a: 3,
+        b: 2,
+        c: 23
+      }, {
+        a: 3,
+        b: 4,
+        c: 23
+      }])
+    })
+
+    it("should output copies of a given array", function() {
+      var a = sig()
+
+      var results = vv([a, 23])
+        (sig.all)
+        (capture)
+        ()
+
+      sig.put(a, 1)
+      sig.put(a, 2)
+      sig.put(a, 3)
+
+      assert.equal(results.length, 3)
+      assert.notStrictEqual(results[0], results[1])
+      assert.notStrictEqual(results[1], results[2])
+      assert.notStrictEqual(results[2], results[0])
+    })
+
+    it("should output copies of a given object", function() {
+      var a = sig()
+
+      var results = vv({
+          a: a,
+          b: 23
+        })
+        (sig.all)
+        (capture)
+        ()
+
+      sig.put(a, 1)
+      sig.put(a, 2)
+      sig.put(a, 3)
+
+      assert.equal(results.length, 3)
+      assert.notStrictEqual(results[0], results[1])
+      assert.notStrictEqual(results[1], results[2])
+      assert.notStrictEqual(results[2], results[0])
+    })
+
+    it("should reset all its listeners when the out signal is reset", function() {
+      var a = sig()
+      var b = sig()
+      var s = sig.all([a, b])
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
+
+      sig.reset(s)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
+    })
+
+    it("should work with signals with non-empty buffers", function() {
+      var a = sig()
+      sig.put(a, 1)
+
+      var b = sig()
+      sig.put(b, 2)
+
+      vv([a, b])
+        (sig.all)
+        (capture)
+        (assert.deepEqual, [[1, 2]])
+    })
+
+    it("should handle errors from its source signals", function() {
+      var results = []
+      var a = sig()
+      var b = sig()
+
+      vv([a, b])
+        (sig.all)
+        (sig.except, function(e) {
+          results.push(e.message)
+        })
+
+      sig.raise(a, new Error(':/'))
+      sig.raise(b, new Error(':|'))
+      sig.raise(a, new Error('o_O'))
+      sig.raise(b, new Error('-_-'))
+      
+      assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    })
   })
 
-  it("should support arrays with both signals and non-signals", function() {
-    var a = sig()
-    var b = sig()
 
-    var results = vv([a, b, 23])
-      (sig.all)
-      (capture)
-      ()
+  describe(".ensure", function() {
+    it("should simply pass through existing signals", function() {
+      vv([1, 2])
+        (sig)
+        (sig.ensure)
+        (capture)
+        (assert.deepEqual, [1, 2])
+    })
 
-    assert(!results.length)
+    it("should create a singleton signal from non-signals", function() {
+      vv(23)
+        (sig.ensure)
+        (capture)
+        (assert.deepEqual, [23])
 
-    sig.put(a, 1)
-    assert(!results.length)
-
-    sig.put(b, 2)
-    assert.deepEqual(results, [[1, 2, 23]])
-
-    sig.put(a, 3)
-    assert.deepEqual(results, [[1, 2, 23], [3, 2, 23]])
-
-    sig.put(b, 4)
-    assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
-  })
-  
-  it("should support objects with both signals and non-signals", function() {
-    var a = sig()
-    var b = sig()
-
-    var results = vv({
-        a: a,
-        b: b,
-        c: 23 
-      })
-      (sig.all)
-      (capture)
-      ()
-
-    assert(!results.length)
-
-    sig.put(a, 1)
-
-    assert(!results.length)
-
-    sig.put(b, 2)
-
-    assert.deepEqual(results, [{
-      a: 1,
-      b: 2,
-      c: 23
-    }])
-
-    sig.put(a, 3)
-
-    assert.deepEqual(results, [{
-      a: 1,
-      b: 2,
-      c: 23
-    }, {
-      a: 3,
-      b: 2,
-      c: 23
-    }])
-
-    sig.put(b, 4)
-
-    assert.deepEqual(results, [{
-      a: 1,
-      b: 2,
-      c: 23
-    }, {
-      a: 3,
-      b: 2,
-      c: 23
-    }, {
-      a: 3,
-      b: 4,
-      c: 23
-    }])
+      vv([[1, 2], [3, 4]])
+        (sig.ensure)
+        (capture)
+        (assert.deepEqual, [[[1, 2], [3, 4]]])
+    })
   })
 
-  it("should output copies of a given array", function() {
-    var a = sig()
 
-    var results = vv([a, 23])
-      (sig.all)
-      (capture)
-      ()
+  describe(".val", function() {
+    it("should hold onto the last value given to the signal", function() {
+      var s = sig.val(2)
+      sig.resume(s)
 
-    sig.put(a, 1)
-    sig.put(a, 2)
-    sig.put(a, 3)
+      var c1 = capture(s)
+      assert.deepEqual(c1, [2])
 
-    assert.equal(results.length, 3)
-    assert.notStrictEqual(results[0], results[1])
-    assert.notStrictEqual(results[1], results[2])
-    assert.notStrictEqual(results[2], results[0])
+      sig.put(s, 3)
+      var c2 = capture(s)
+      assert.deepEqual(c1, [2, 3])
+      assert.deepEqual(c2, [3])
+
+      sig.put(s, 4)
+      var c3 = capture(s)
+      assert.deepEqual(c1, [2, 3, 4])
+      assert.deepEqual(c2, [3, 4])
+      assert.deepEqual(c3, [4])
+    })
   })
 
-  it("should output copies of a given object", function() {
-    var a = sig()
 
-    var results = vv({
-        a: a,
-        b: 23
-      })
-      (sig.all)
-      (capture)
-      ()
-
-    sig.put(a, 1)
-    sig.put(a, 2)
-    sig.put(a, 3)
-
-    assert.equal(results.length, 3)
-    assert.notStrictEqual(results[0], results[1])
-    assert.notStrictEqual(results[1], results[2])
-    assert.notStrictEqual(results[2], results[0])
-  })
-
-  it("should reset all its listeners when the out signal is reset", function() {
-    var a = sig()
-    var b = sig()
-    var s = sig.all([a, b])
-    assert.equal(a.targets.length, 1)
-    assert.equal(b.targets.length, 1)
-
-    sig.reset(s)
-    assert(!a.targets.length)
-    assert(!b.targets.length)
-  })
-
-  it("should work with signals with non-empty buffers", function() {
-    var a = sig()
-    sig.put(a, 1)
-
-    var b = sig()
-    sig.put(b, 2)
-
-    vv([a, b])
-      (sig.all)
-      (capture)
-      (assert.deepEqual, [[1, 2]])
-  })
-
-  it("should handle errors from its source signals", function() {
-    var results = []
-    var a = sig()
-    var b = sig()
-
-    vv([a, b])
-      (sig.all)
-      (sig.except, function(e) {
-        results.push(e.message)
-      })
-
-    sig.raise(a, new Error(':/'))
-    sig.raise(b, new Error(':|'))
-    sig.raise(a, new Error('o_O'))
-    sig.raise(b, new Error('-_-'))
-    
-    assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
-  })
-})
-
-
-describe("sig.ensure", function() {
-  it("should simply pass through existing signals", function() {
-    vv([1, 2])
-      (sig)
-      (sig.ensure)
-      (capture)
-      (assert.deepEqual, [1, 2])
-  })
-
-  it("should create a singleton signal from non-signals", function() {
-    vv(23)
-      (sig.ensure)
-      (capture)
-      (assert.deepEqual, [23])
-
-    vv([[1, 2], [3, 4]])
-      (sig.ensure)
-      (capture)
-      (assert.deepEqual, [[[1, 2], [3, 4]]])
-  })
-})
-
-
-describe("sig.val", function() {
-  it("should hold onto the last value given to the signal", function() {
-    var s = sig.val(2)
-    sig.resume(s)
-
-    var c1 = capture(s)
-    assert.deepEqual(c1, [2])
-
-    sig.put(s, 3)
-    var c2 = capture(s)
-    assert.deepEqual(c1, [2, 3])
-    assert.deepEqual(c2, [3])
-
-    sig.put(s, 4)
-    var c3 = capture(s)
-    assert.deepEqual(c1, [2, 3, 4])
-    assert.deepEqual(c2, [3, 4])
-    assert.deepEqual(c3, [4])
-  })
-})
-
-
-describe("sig.resolve", function() {
-  it("should put a single null value onto a signal", function() {
-    vv(sig())
-      (sig.resolve)
-      (capture)
-      (assert.deepEqual, [null])
+  describe(".resolve", function() {
+    it("should put a single null value onto a signal", function() {
+      vv(sig())
+        (sig.resolve)
+        (capture)
+        (assert.deepEqual, [null])
+    })
   })
 })
