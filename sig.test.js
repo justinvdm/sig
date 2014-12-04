@@ -606,31 +606,6 @@ describe("sig", function() {
   })
 
 
-  describe(".then", function() {
-    it("should only map a signal's first output", function() {
-      vv([1, 2, 3, 4])
-        (sig)
-        (then, function(x) {
-          return x + 1
-        })
-        (capture)
-        (assert.deepEqual, [2])
-    })
-
-    it("should allow additional args", function() {
-      function fn(a, b, c) {
-        return [a, b, c]
-      }
-
-      vv([1, 2, 3, 4])
-        (sig)
-        (then, fn, 23, 32)
-        (capture)
-        (assert.deepEqual, [[1, 23, 32]])
-    })
-  })
-
-
   describe(".isSig", function() {
     it("should determine whether something is a signal", function() {
       assert(!isSig(void 0))

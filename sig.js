@@ -21,7 +21,6 @@
   sig.filter = filter
   sig.limit = limit
   sig.once = once
-  sig.then = then
   sig.ensure = ensure
   sig.any = any
   sig.all = all
@@ -324,12 +323,6 @@
 
   function once(s) {
     return limit(s, 1)
-  }
-
-
-  function then(s) {
-    s = once(s)
-    return map.apply(null, arguments)
   }
 
 
