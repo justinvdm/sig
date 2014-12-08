@@ -6,7 +6,6 @@
   sig.reset = reset
   sig.put = put
   sig.putMany = putMany
-  sig.resolve = resolve
   sig.receive = receive
   sig.watch = watch
   sig.unwatch = unwatch
@@ -35,8 +34,8 @@
       type: 'sig',
       targets: [],
       sources: [],
-      receiver: identityReceiver,
-      errorHandler: thrower
+      receiver: put,
+      errorHandler: raise
     })
 
     if (arguments.length) initialPut(s, obj)
@@ -49,6 +48,7 @@
     s.current = nil
     s.buffer = []
     s.cleanups = []
+    s.error = null
     return s
   }
 
@@ -57,11 +57,6 @@
     if (isArray(obj)) putMany(s, obj)
     else put(s, obj)
     return s
-  }
-
-
-  function identityReceiver(s, v) {
-    put(s, v)
   }
 
 
@@ -175,15 +170,8 @@
   }
 
 
-  function resolve(s) {
-    put(s, null)
-    return s
-  }
-
-
   function receive(s, d) {
-    try { s.receiver.apply(s, [s].concat(d)) }
-    catch (e) { raise(s, e) }
+    s.receiver.apply(s, [s].concat(d))
     return s
   }
 
@@ -208,8 +196,16 @@
 
 
   function raise(s, e) {
-    try { s.errorHandler(e, s) }
-    catch (e2) { propogateError(s, e2) }
+    return !s.error
+      ? handleError(s, e)
+      : propogateError(s, e)
+  }
+
+
+  function handleError(s, e) {
+    s.error = e
+    s.errorHandler(s, e)
+    s.error = null
     return s
   }
 
@@ -427,11 +423,6 @@
 
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
-  }
-
-
-  function thrower(e) {
-    throw e
   }
 
 

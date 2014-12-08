@@ -5,9 +5,6 @@ var vv = require('drainpipe')
 var sig = require('./sig'),
     reset = sig.reset,
     put = sig.put,
-    putMany = sig.putMany,
-    resolve = sig.resolve,
-    receive = sig.receive,
     watch = sig.watch,
     unwatch = sig.unwatch,
     pause = sig.pause,
@@ -27,7 +24,6 @@ var sig = require('./sig'),
     depend = sig.depend,
     undepend = sig.undepend,
     isSig = sig.isSig,
-    nil = sig.nil,
     val = sig.val
 
 
@@ -39,13 +35,6 @@ function capture(s) {
   })
 
   return values
-}
-
-
-function contains(arr, values) {
-  return !!values.some(function(v) {
-    return arr.indexOf(v) > -1
-  })
 }
 
 
@@ -219,11 +208,11 @@ describe("sig", function() {
     assert.deepEqual(e.sources, [b])
   })
 
-  it.skip("should support error handling", function(done) {
+  it("should support error handling", function(done) {
     var s = sig()
     var e = new Error(':/')
 
-    s.errorHandler = function(caughtErr) {
+    s.errorHandler = function(s, caughtErr) {
       assert.strictEqual(caughtErr, e)
       done()
     }
@@ -231,7 +220,7 @@ describe("sig", function() {
     raise(s, e)
   })
 
-  it.skip("should throw unhandled errors", function() {
+  it("should throw unhandled errors", function() {
     function thrower() {
       raise(sig(), new Error('o_O'))
     }
@@ -239,25 +228,11 @@ describe("sig", function() {
     assert.throws(thrower, /o_O/)
   })
 
-  it.skip("should allow handlers of ending signals to rethrow errors", function() {
+  it("should allow handlers of ending signals to rethrow errors", function() {
     var s = sig()
 
-    s.errorHandler = function(e) {
-      throw new Error(e + '!')
-    }
-
-    function thrower() {
-      raise(s, new Error('o_O'))
-    }
-
-    assert.throws(thrower, /o_O/)
-  })
-
-  it.skip("should allow handlers of ending signals to rethrow errors", function() {
-    var s = sig()
-
-    s.errorHandler = function(e) {
-      throw new Error(e + '!')
+    s.errorHandler = function(s, e) {
+      raise(s, new Error(e + '!'))
     }
 
     function thrower() {
@@ -267,68 +242,67 @@ describe("sig", function() {
     assert.throws(thrower, /o_O!/)
   })
 
-  it.skip("should allow errors to propogate", function() {
+  it("should allow errors to propogate", function() {
     var s1 = sig()
     var s2 = sig()
     var s3 = sig()
     var s4 = sig()
     var s3Err, s4Err
 
-    var e1 = new Error(':|')
-    var e2 = new Error('o_O')
+    var e1 = new Error('o_O')
+    var e2 = new Error(':|')
 
-    watch(s2, s1)
-    watch(s3, s2)
-    watch(s4, s2)
+    then(s1, s2)
+    then(s2, s3)
+    then(s2, s4)
 
-    s1.errorHandler = function(caughtErr) {
-      if (caughtErr != ':|') throw caughtErr
+    s1.errorHandler = function(s, caughtErr) {
+      if (caughtErr.message != ':|') raise(s, caughtErr)
     }
 
-    s3.errorHandler = function(caughtErr) {
+    s3.errorHandler = function(s, caughtErr) {
       s3Err = caughtErr
     }
 
-    s4.errorHandler = function(caughtErr) {
+    s4.errorHandler = function(s, caughtErr) {
       s4Err = caughtErr
     }
 
     raise(s1, e1)
     raise(s1, e2)
-    assert.strictEqual(s3Err, e2)
-    assert.strictEqual(s4Err, e2)
+    assert.strictEqual(s3Err, e1)
+    assert.strictEqual(s4Err, e1)
   })
 
-  it.skip("should catch and raise errors thrown in receivers", function(done) {
-    var s = sig(null)
+  it("should catch and raise errors raised in receivers", function(done) {
+    var s = sig()
     var t = sig()
     var e = new Error('o_O')
 
     t.receiver = function() {
-      throw e
+      raise(t, e)
     }
 
-    t.errorHandler = function(caughtErr) {
+    t.errorHandler = function(t, caughtErr) {
       assert.strictEqual(caughtErr, e)
       done()
     }
 
     watch(t, s)
-    resume(s)
+    put(s)
   })
 
   it.skip("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
-
     var t = sig()
-    t.receiver = function(x, t) { put(t, x) }
-
     var u = sig()
-    u.receiver = function(x) { results.push(x) }
+    u.receiver = function(u, x) { results.push(x) }
 
     watch(t, s)
     watch(u, t)
+    pause(s)
+    pause(t)
 
     put(s, 1)
     assert(!results.length)
@@ -589,11 +563,11 @@ describe("sig", function() {
   })
 
   describe(".except", function(done) {
-    it.skip("should create a signal that catches a given signals errors", function(done) {
+    it("should create a signal that catches errors", function(done) {
       var s = sig()
       var e = new Error(':/')
 
-      var t = except(s, function(caughtErr) {
+      var t = except(s, function(t, caughtErr) {
         assert.strictEqual(caughtErr, e)
         done()
       })
@@ -1067,16 +1041,6 @@ describe("sig", function() {
       assert.deepEqual(c1, [2, 3, 4])
       assert.deepEqual(c2, [3, 4])
       assert.deepEqual(c3, [4])
-    })
-  })
-
-
-  describe(".resolve", function() {
-    it.skip("should put a single null value onto a signal", function() {
-      vv(sig())
-        (resolve)
-        (capture)
-        (assert.deepEqual, [null])
     })
   })
 })
