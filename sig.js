@@ -1,7 +1,5 @@
 ;(function() {
   var nil = {}
-  var scopes = []
-  var currentScope
 
   isArray = Array.isArray
 
@@ -21,41 +19,35 @@
   sig.filter = filter
   sig.limit = limit
   sig.once = once
+  sig.then = then
   sig.ensure = ensure
   sig.any = any
   sig.all = all
   sig.spread = spread
-  sig.depend = depend
-  sig.undepend = undepend
   sig.isSig = isSig
   sig.nil = nil
-  sig.val = val
 
 
   function sig(obj) {
     if (isSig(obj)) return obj
-    if (typeof obj == 'function') return gen(obj)
 
     var s = resetProps({
       type: 'sig',
-      sticky: false,
+      targets: [],
+      sources: [],
       receiver: identityReceiver,
       errorHandler: thrower
     })
 
-    updateScope(s)
     if (arguments.length) initialPut(s, obj)
     return s
   }
 
 
   function resetProps(s) {
-    s.paused = true
+    s.paused = false
     s.current = nil
-    s.sources = []
-    s.targets = []
     s.buffer = []
-    s.dependants = []
     s.cleanups = []
     return s
   }
@@ -68,121 +60,109 @@
   }
 
 
-  function identityReceiver(x, t) {
-    put(t, x)
-  }
-
-
-  function pushScope() {
-    var scope = []
-    currentScope = scope
-    scopes.push(scope)
-    return scope
-  }
-
-
-  function popScope() {
-    var scope = scopes.pop()
-    currentScope = scopes[scopes.length - 1]
-    return scope
-  }
-
-
-  function updateScope(s) {
-    var scope = currentScope
-    if (!scope) return
-    scope.push(s)
-    return s
-  }
-
-
-  function gen(fn) {
-    var scope = pushScope()
-    var s = fn()
-    popScope()
-    updateScope(s)
-
-    var n = scope.length
-    var i = -1
-    var t
-
-    while (++i < n) {
-      t = scope[i]
-      if (t === s) continue
-      depend(t, s)
-      if (!t.targets.length) except(t, raises)
-    }
-
-    function raises(e) {
-      raise(s, e)
-    }
-
-    return s
+  function identityReceiver(s, v) {
+    put(s, v)
   }
 
 
   function reset(s) {
-    s.cleanups.forEach(invoke)
-    s.sources.forEach(function(source) { untarget(s, source) })
-    s.targets.forEach(function(target) { unsource(target, s) })
-    s.dependants.forEach(reset)
+    resetTargets(s)
+    resetSources(s)
     resetProps(s)
     return s
   }
 
 
-  function watch(t, s) {
-    var current
+  function resetTargets(s) {
+    var i = -1
+    var targets = s.targets
+    var n = targets.length
+    var t
 
-    unwatch(t, s)
+    while (++i < n) {
+      t = targets[i]
+      rmTarget(s, t)
+      rmSource(t, s)
+      if (t.targets.length && !t.sources.length) resetTargets(t)
+    }
+  }
+
+
+  function resetSources(t) {
+    var i = -1
+    var sources = t.sources
+    var n = sources.length
+    var s
+
+    while (++i < n) {
+      s = sources[i]
+      rmTarget(s, t)
+      if (s.sources.length && !s.targets.length) resetSources(s)
+    }
+  }
+
+
+  function addTarget(s, t) {
+    rmTarget(s, t)
     s.targets.push(t)
-    t.sources.push(s)
+    return s
+  }
 
-    if (s.sticky) {
-      current = s.current
-      if (current !== nil) receive(t, current)
+
+  function rmTarget(s, t) {
+    rm(s.targets, t)
+    return s
+  }
+
+
+  function addSource(t, s) {
+    rmSource(t, s)
+    t.sources.push(s)
+    return t
+  }
+
+
+  function rmSource(t, s) {
+    rm(t.sources, s)
+    return t
+  }
+
+
+  function refreshSources(t) {
+    var i = -1
+    var sources = t.sources
+    var n = sources.length
+    var s
+
+    while (++i < n) {
+      s = sources[i]
+      addTarget(s, t)
+      refreshSources(s)
     }
 
     return t
   }
 
 
-  function depend(t, s) {
-    undepend(t, s)
-    s.dependants.push(t)
-    return t
-  }
-
-
-  function undepend(t, s) {
-    rm(s.dependants, t)
-    return t
-  }
-
-
-  function untarget(t, s) {
-    rm(s.targets, t)
-    return t
-  }
-
-
-  function unsource(t, s) {
-    rm(t.sources, s)
+  function watch(t, s) {
+    addSource(t, s)
+    addTarget(s, t)
+    refreshSources(s)
     return t
   }
 
 
   function unwatch(t, s) {
-    unsource(t, s)
-    untarget(t, s)
+    rmSource(t, s)
+    rmTarget(s, t)
     return t
   }
 
 
-  function put(s, x) {
-    if (s.sticky) s.current = x
-    if (s.paused) buffer(s, x)
-    else send(s, x)
+  function put(s) {
+    var d = slice(arguments, 1)
+    if (s.paused) buffer(s, d)
+    else send(s, d)
     return s
   }
 
@@ -201,8 +181,8 @@
   }
 
 
-  function receive(s, x) {
-    try { s.receiver(x, s) }
+  function receive(s, d) {
+    try { s.receiver.apply(s, [s].concat(d)) }
     catch (e) { raise(s, e) }
     return s
   }
@@ -278,17 +258,32 @@
   }
 
 
-  function map(s, fn) {
+  function then(s, obj) {
+    return typeof obj == 'function'
+      ? thenFn(s, obj)
+      : thenSig(s, obj)
+  }
+
+
+  function thenFn(s, fn) {
     var t = sig()
+    t.receiver = fn
+    return thenSig(s, t)
+  }
+
+
+  function thenSig(s, t) {
+    watch(t, s)
+    return t
+  }
+
+
+  function map(s, fn) {
     var args = slice(arguments, 2)
 
-    t.receiver = function(x, t) {
+    return then(s, function(t, x) {
       put(t, fn.apply(t, [x].concat(args)))
-    }
-
-    watch(t, s)
-    resume(s)
-    return t
+    })
   }
 
 
@@ -388,14 +383,6 @@
   }
 
 
-  function val(v) {
-    var s = sig()
-    s.sticky = true
-    if (arguments.length) initialPut(s, [v])
-    return s
-  }
-
-
   function isSig(s) {
     return (s || 0).type == 'sig'
   }
@@ -440,11 +427,6 @@
 
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
-  }
-
-
-  function invoke(fn) {
-    fn()
   }
 
 
