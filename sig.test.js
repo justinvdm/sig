@@ -44,14 +44,14 @@ describe("sig", function() {
     var results = []
 
     vv(src)
-      (then, function(s, v) {
-        if (v % 2) put(s, v)
+      (then, function(s, x) {
+        if (x % 2) put(s, x)
       })
-      (then, function(s, v) {
-        put(s, v + 1)
+      (then, function(s, x) {
+        put(s, x + 1)
       })
-      (then, function(s, v) {
-        results.push(v)
+      (then, function(s, x) {
+        results.push(x)
       })
 
     assert(!results.length)

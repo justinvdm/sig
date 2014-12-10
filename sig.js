@@ -162,10 +162,9 @@
   }
 
 
-  function put(s) {
-    var d = slice(arguments, 1)
-    if (s.paused) buffer(s, d)
-    else send(s, d)
+  function put(s, x) {
+    if (s.paused) buffer(s, x)
+    else send(s, x)
     return s
   }
 
@@ -178,8 +177,8 @@
   }
 
 
-  function receive(s, d) {
-    s.receiver.apply(s, [s].concat(d))
+  function receive(s, x) {
+    s.receiver.call(s, s, x)
     return s
   }
 
