@@ -1,7 +1,8 @@
 ;(function() {
   var nil = {}
 
-  isArray = Array.isArray
+  var isArray = Array.isArray
+  var _slice = Array.prototype.slice
 
   sig.reset = reset
   sig.put = put
@@ -441,8 +442,6 @@
     arr.splice(i, 1)
   }
 
-
-  var _slice = Array.prototype.slice
 
   function slice(arr, a, b) {
     return _slice.call(arr, a, b)
