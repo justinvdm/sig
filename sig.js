@@ -35,12 +35,22 @@
       targets: [],
       sources: [],
       eager: true,
-      receiver: put,
-      errorHandler: raise
+      receiver: putReceiver,
+      errorHandler: raiseHandler
     })
 
     if (arguments.length) putMany(s, obj)
     return s
+  }
+
+
+  function putReceiver(x) {
+    put(this, x)
+  }
+
+
+  function raiseHandler(e) {
+    raise(this, e)
   }
 
 
@@ -171,7 +181,7 @@
 
 
   function receive(s, x) {
-    s.receiver.call(s, s, x)
+    s.receiver.call(s, x)
     return s
   }
 
@@ -199,7 +209,7 @@
     var cleanups = s.cleanups
     var n = cleanups.length
     var i = -1
-    while (++i < n) cleanups[i].call(s, s)
+    while (++i < n) cleanups[i].call(s)
     return s
   }
 
@@ -213,7 +223,7 @@
 
   function handleError(s, e) {
     s.error = e
-    s.errorHandler(s, e)
+    s.errorHandler.call(s, e)
     s.error = null
     return s
   }
@@ -286,8 +296,8 @@
   function map(s, fn) {
     var args = slice(arguments, 2)
 
-    return then(s, function(t, x) {
-      put(t, fn.apply(t, [x].concat(args)))
+    return then(s, function(x) {
+      put(this, fn.apply(this, [x].concat(args)))
     })
   }
 
@@ -295,8 +305,8 @@
   function filter(s, fn) {
     var args = slice(arguments, 2)
       
-    return then(s, function(t, x) {
-      if (fn.apply(t, [x].concat(args))) put(t, x)
+    return then(s, function(x) {
+      if (fn.apply(this, [x].concat(args))) put(this, x)
     })
   }
 
@@ -304,9 +314,9 @@
   function limit(s, n) {
     var i = 0
     
-    return then(s, function(t, x) {
-      if (++i > n) unwatch(t, s)
-      else put(t, x)
+    return then(s, function(x) {
+      if (++i > n) unwatch(this, s)
+      else put(this, x)
     })
   }
 

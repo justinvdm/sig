@@ -28,7 +28,7 @@ var sig = require('./sig'),
 function capture(s) {
   var values = []
 
-  then(s, function(t, x) {
+  then(s, function(x) {
     values.push(x)
   })
 
@@ -42,13 +42,13 @@ describe("sig", function() {
     var results = []
 
     vv(src)
-      (then, function(s, x) {
-        if (x % 2) put(s, x)
+      (then, function(x) {
+        if (x % 2) put(this, x)
       })
-      (then, function(s, x) {
-        put(s, x + 1)
+      (then, function(x) {
+        put(this, x + 1)
       })
-      (then, function(s, x) {
+      (then, function(x) {
         results.push(x)
       })
 
@@ -210,7 +210,7 @@ describe("sig", function() {
     var s = sig()
     var e = new Error(':/')
 
-    s.errorHandler = function(s, caughtErr) {
+    s.errorHandler = function(caughtErr) {
       assert.strictEqual(caughtErr, e)
       done()
     }
@@ -229,7 +229,7 @@ describe("sig", function() {
   it("should allow handlers of ending signals to rethrow errors", function() {
     var s = sig()
 
-    s.errorHandler = function(s, e) {
+    s.errorHandler = function(e) {
       raise(s, new Error(e + '!'))
     }
 
@@ -254,15 +254,15 @@ describe("sig", function() {
     then(s2, s3)
     then(s2, s4)
 
-    s1.errorHandler = function(s, caughtErr) {
-      if (caughtErr.message != ':|') raise(s, caughtErr)
+    s1.errorHandler = function(caughtErr) {
+      if (caughtErr.message != ':|') raise(this, caughtErr)
     }
 
-    s3.errorHandler = function(s, caughtErr) {
+    s3.errorHandler = function(caughtErr) {
       s3Err = caughtErr
     }
 
-    s4.errorHandler = function(s, caughtErr) {
+    s4.errorHandler = function(caughtErr) {
       s4Err = caughtErr
     }
 
@@ -281,7 +281,7 @@ describe("sig", function() {
       raise(t, e)
     }
 
-    t.errorHandler = function(t, caughtErr) {
+    t.errorHandler = function(caughtErr) {
       assert.strictEqual(caughtErr, e)
       done()
     }
@@ -295,7 +295,7 @@ describe("sig", function() {
     var s = sig()
     var t = sig()
     var u = sig()
-    u.receiver = function(u, x) { results.push(x) }
+    u.receiver = function(x) { results.push(x) }
 
     vv(s)
       (then, t)
@@ -354,7 +354,7 @@ describe("sig", function() {
     var s2 = sig()
 
     var t = sig()
-    t.receiver = function(t, x) { results.push(x) }
+    t.receiver = function(x) { results.push(x) }
 
     watch(t, s1)
     watch(t, s2)
@@ -373,10 +373,10 @@ describe("sig", function() {
     var s = sig()
 
     var t1 = sig()
-    t1.receiver = function(t1, x) { results1.push(x) }
+    t1.receiver = function(x) { results1.push(x) }
 
     var t2 = sig()
-    t2.receiver = function(t2, x) { results2.push(x) }
+    t2.receiver = function(x) { results2.push(x) }
 
     then(s, t1)
     then(s, t2)
@@ -417,10 +417,10 @@ describe("sig", function() {
     var s = sig()
 
     var t1 = sig()
-    t1.receiver = function(t1, x) { results1.put(x) }
+    t1.receiver = function(x) { results1.put(x) }
 
     var t2 = sig()
-    t2.receiver = function(t2, x) { results2.put(x) }
+    t2.receiver = function(x) { results2.put(x) }
 
     then(s, t1)
     then(s, t2)
@@ -513,7 +513,7 @@ describe("sig", function() {
       var s = sig()
       var e = new Error(':/')
 
-      var t = except(s, function(t, caughtErr) {
+      var t = except(s, function(caughtErr) {
         assert.strictEqual(caughtErr, e)
         done()
       })
