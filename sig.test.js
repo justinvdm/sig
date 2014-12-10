@@ -536,7 +536,7 @@ describe("sig", function() {
         (assert.deepEqual, [3, 5, 7, 9])
     })
 
-    it.skip("should allow addit.skipional args", function() {
+    it.skip("should allow additional args", function() {
       function fn(a, b, c) {
         return [a, b, c]
       }
@@ -564,7 +564,7 @@ describe("sig", function() {
         (assert.deepEqual, [3, 5])
     })
 
-    it.skip("should allow addit.skipional args", function() {
+    it.skip("should allow additional args", function() {
       function fn(a, b, c) {
         return (a * b) % c
       }
@@ -590,7 +590,7 @@ describe("sig", function() {
 
 
   describe(".once", function() {
-    it.skip("should limit.skip a signal to it.skips first output", function() {
+    it.skip("should limit a signal to its first output", function() {
       vv([1, 2, 3, 4, 5, 6])
         (sig)
         (once)
@@ -622,7 +622,7 @@ describe("sig", function() {
         (assert.deepEqual, [4, 6, 8])
     })
 
-    it.skip("should append addit.skipional args", function() {
+    it.skip("should append additional args", function() {
       var fn = spread(function(a, b, c, d) {
         return [a, b, c, d]
       })
@@ -685,7 +685,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it.skip("should reset all it.skips listeners when the out signal is reset", function() {
+    it.skip("should reset all its listeners when the out signal is reset", function() {
       var a = sig()
       var b = sig()
       var s = any([a, b])
@@ -697,7 +697,7 @@ describe("sig", function() {
       assert(!b.targets.length)
     })
 
-    it.skip("should handle errors from it.skips source signals", function() {
+    it.skip("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
       var b = sig()
@@ -880,7 +880,7 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it.skip("should reset all it.skips listeners when the out signal is reset", function() {
+    it.skip("should reset all its listeners when the out signal is reset", function() {
       var a = sig()
       var b = sig()
       var s = all([a, b])
@@ -905,7 +905,7 @@ describe("sig", function() {
         (assert.deepEqual, [[1, 2]])
     })
 
-    it.skip("should handle errors from it.skips source signals", function() {
+    it.skip("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
       var b = sig()
