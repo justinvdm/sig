@@ -478,7 +478,7 @@ describe("sig", function() {
     assert.strictEqual(sig(s), s)
   })
 
-  it.skip("should create a signal from an array of values", function() {
+  it("should create a signal from an array of values", function() {
     vv([23])
       (sig)
       (capture)

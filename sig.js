@@ -39,7 +39,7 @@
       errorHandler: raise
     })
 
-    if (arguments.length) initialPut(s, obj)
+    if (arguments.length) putMany(s, obj)
     return s
   }
 
@@ -50,13 +50,6 @@
     s.buffer = []
     s.cleanups = []
     s.error = null
-    return s
-  }
-
-
-  function initialPut(s, obj) {
-    if (isArray(obj)) putMany(s, obj)
-    else put(s, obj)
     return s
   }
 
