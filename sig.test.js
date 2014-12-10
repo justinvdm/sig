@@ -292,15 +292,17 @@ describe("sig", function() {
     put(s)
   })
 
-  it.skip("should support signal pausing and resuming", function() {
+  it("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
     var t = sig()
     var u = sig()
     u.receiver = function(u, x) { results.push(x) }
 
-    watch(t, s)
-    watch(u, t)
+    vv(s)
+      (then, t)
+      (then, u)
+
     pause(s)
     pause(t)
 
@@ -330,17 +332,13 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3, 4])
   })
 
-  it.skip("should allow multiple source signals", function() {
+  it("should allow multiple source signals", function() {
     var results = []
     var s1 = sig()
     var s2 = sig()
 
     var t = sig()
-    t.receiver = function(x) { results.push(x) }
-
-    resume(t)
-    resume(s1)
-    resume(s2)
+    t.receiver = function(t, x) { results.push(x) }
 
     watch(t, s1)
     watch(t, s2)
@@ -353,23 +351,19 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3, 4])
   })
 
-  it.skip("should allow multiple target signals", function() {
+  it("should allow multiple target signals", function() {
     var results1 = []
     var results2 = []
     var s = sig()
 
     var t1 = sig()
-    t1.receiver = function(x) { results1.push(x) }
+    t1.receiver = function(t1, x) { results1.push(x) }
 
     var t2 = sig()
-    t2.receiver = function(x) { results2.push(x) }
+    t2.receiver = function(t2, x) { results2.push(x) }
 
-    resume(s)
-    resume(t1)
-    resume(t2)
-
-    watch(t1, s)
-    watch(t2, s)
+    then(s, t1)
+    then(s, t2)
 
     vv(s)
       (put, 1)
@@ -381,7 +375,7 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it.skip("should allow a target signal to be reset", function() {
+  it("should allow a target signal to be reset", function() {
     var results = []
     var s1 = sig()
     var s2 = sig()
@@ -389,12 +383,8 @@ describe("sig", function() {
     var t = sig()
     t.receiver = function(x) { results.push(x) }
 
-    resume(s1)
-    resume(s2)
-    resume(t)
-
-    watch(t, s1)
-    watch(t, s2)
+    then(s1, t)
+    then(s2, t)
     reset(t)
 
     put(s1, 1)
@@ -405,23 +395,19 @@ describe("sig", function() {
     assert(!results.length)
   })
 
-  it.skip("should allow a source signal to be reset", function() {
+  it("should allow a source signal to be reset", function() {
     var results1 = []
     var results2 = []
     var s = sig()
 
     var t1 = sig()
-    t1.receiver = function(x) { results1.put(x) }
+    t1.receiver = function(t1, x) { results1.put(x) }
 
     var t2 = sig()
-    t2.receiver = function(x) { results2.put(x) }
+    t2.receiver = function(t2, x) { results2.put(x) }
 
-    resume(s)
-    resume(t1)
-    resume(t2)
-
-    watch(t1, s)
-    watch(t2, s)
+    then(s, t1)
+    then(s, t2)
     reset(s)
 
     vv(s)
@@ -685,7 +671,7 @@ describe("sig", function() {
 
 
   describe(".any", function() {
-    it.skip("should support arrays wit.skiph both signals and non-signals", function() {
+    it.skip("should support arrays with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -709,7 +695,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
     })
     
-    it.skip("should support objects wit.skiph both signals and non-signals", function() {
+    it.skip("should support objects with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -791,14 +777,14 @@ describe("sig", function() {
 
 
   describe(".all", function() {
-    it.skip("should support arrays wit.skiph only non signals", function() {
+    it.skip("should support arrays with only non signals", function() {
       vv([21, 22, 23])
        (all)
        (capture)
        (assert.deepEqual, [[21, 22, 23]])
     })
 
-    it.skip("should support objects wit.skiph only non signals", function() {
+    it.skip("should support objects with only non signals", function() {
       vv({
          a: 21,
          b: 22,
@@ -813,7 +799,7 @@ describe("sig", function() {
         }])
     })
 
-    it.skip("should support arrays wit.skiph both signals and non-signals", function() {
+    it.skip("should support arrays with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -837,7 +823,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
     })
     
-    it.skip("should support objects wit.skiph both signals and non-signals", function() {
+    it.skip("should support objects with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -944,7 +930,7 @@ describe("sig", function() {
       assert(!b.targets.length)
     })
 
-    it.skip("should work wit.skiph signals wit.skiph non-empty buffers", function() {
+    it.skip("should work with signals with non-empty buffers", function() {
       var a = sig()
       put(a, 1)
 

@@ -76,10 +76,12 @@
 
     while (++i < n) {
       t = targets[i]
-      rmTarget(s, t)
       rmSource(t, s)
       if (t.targets.length && !t.sources.length) resetTargets(t)
     }
+
+    s.targets = []
+    return s
   }
 
 
@@ -94,6 +96,8 @@
       rmTarget(s, t)
       if (s.sources.length && !s.targets.length) resetSources(s)
     }
+
+    return t
   }
 
 
