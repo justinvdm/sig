@@ -293,16 +293,11 @@
 
 
   function filter(s, fn) {
-    var t = sig()
     var args = slice(arguments, 2)
       
-    t.receiver = function(x, t) {
+    return then(s, function(t, x) {
       if (fn.apply(t, [x].concat(args))) put(t, x)
-    }
-
-    watch(t, s)
-    resume(s)
-    return t
+    })
   }
 
 

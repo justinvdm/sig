@@ -553,7 +553,7 @@ describe("sig", function() {
 
 
   describe(".filter", function() {
-    it.skip("should filter the given signal", function() {
+    it("should filter the given signal", function() {
       vv([2, 3, 4, 5, 6, 11, 12, 15, 16])
         (sig)
         (filter, function(x) { return x % 2 })
@@ -562,7 +562,7 @@ describe("sig", function() {
         (assert.deepEqual, [3, 5])
     })
 
-    it.skip("should allow additional args", function() {
+    it("should allow additional args", function() {
       function fn(a, b, c) {
         return (a * b) % c
       }
