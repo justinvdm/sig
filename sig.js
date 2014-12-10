@@ -34,6 +34,7 @@
       type: 'sig',
       targets: [],
       sources: [],
+      eager: true,
       receiver: put,
       errorHandler: raise
     })
@@ -44,7 +45,7 @@
 
 
   function resetProps(s) {
-    s.paused = false
+    s.paused = true
     s.current = nil
     s.buffer = []
     s.cleanups = []
@@ -145,9 +146,11 @@
 
 
   function watch(t, s) {
+    var firstTarget = !s.targets.length
     addSource(t, s)
     addTarget(s, t)
     refreshSources(s)
+    if (s.eager && firstTarget) resume(s)
     return t
   }
 

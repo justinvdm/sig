@@ -332,6 +332,24 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3, 4])
   })
 
+  it("should support eager signals", function() {
+    var s = sig()
+    var t = sig()
+    var u = sig()
+
+    s.eager = true
+    t.eager = false
+
+    assert(s.paused)
+    assert(t.paused)
+
+    then(s, u)
+    assert(!s.paused)
+
+    then(t, u)
+    assert(t.paused)
+  })
+
   it("should allow multiple source signals", function() {
     var results = []
     var s1 = sig()
