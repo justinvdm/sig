@@ -599,7 +599,7 @@ describe("sig", function() {
 
 
   describe(".isSig", function() {
-    it.skip("should determine whether something is a signal", function() {
+    it("should determine whether something is a signal", function() {
       assert(!isSig(void 0))
       assert(!isSig(null))
       assert(!isSig({}))
