@@ -21,8 +21,6 @@ var sig = require('./sig'),
     any = sig.any,
     all = sig.all,
     spread = sig.spread,
-    depend = sig.depend,
-    undepend = sig.undepend,
     isSig = sig.isSig,
     val = sig.val
 
@@ -527,7 +525,7 @@ describe("sig", function() {
 
 
   describe(".map", function() {
-    it.skip("should map the given signal", function() {
+    it("should map the given signal", function() {
       vv([1, 2, 3, 4])
         (sig)
         (map, function(x) { return x * 2 })
@@ -536,7 +534,7 @@ describe("sig", function() {
         (assert.deepEqual, [3, 5, 7, 9])
     })
 
-    it.skip("should allow additional args", function() {
+    it("should allow additional args", function() {
       function fn(a, b, c) {
         return [a, b, c]
       }
