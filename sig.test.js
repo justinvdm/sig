@@ -420,15 +420,12 @@ describe("sig", function() {
     assert(!results2.length)
   })
 
-  it.skip("should allow a signal to stop watching another", function() {
+  it("should allow a signal to stop watching another", function() {
     var results = []
     var s = sig()
 
     var t = sig()
     t.receiver = function(x) { results.push(x) }
-
-    resume(s)
-    resume(t)
 
     watch(t, s)
     unwatch(t, s)
@@ -442,52 +439,7 @@ describe("sig", function() {
     assert(!results.length)
   })
 
-  it.skip("should support signal dependencies", function() {
-    var s = sig()
-    var t = sig()
-    var u = sig()
-    var results = capture(u)
-
-    depend(t, s)
-    depend(u, t)
-
-    vv(u)
-      (put, 1)
-      (put, 2)
-      (put, 3)
-
-    assert.deepEqual(results, [1, 2, 3])
-
-    reset(s)
-
-    vv(u)
-      (put, 4)
-      (put, 5)
-      (put, 6)
-
-    assert.deepEqual(results, [1, 2, 3])
-  })
-
-  it.skip("should allow signals to stop depending on other signals", function() {
-    var s = sig()
-    var t = sig()
-    var u = sig()
-    var results = capture(u)
-
-    depend(t, s)
-    depend(u, t)
-    undepend(u, t)
-    reset(s)
-
-    vv(u)
-      (put, 1)
-      (put, 2)
-      (put, 3)
-
-    assert.deepEqual(results, [1, 2, 3])
-  })
-
-  it.skip("should prevent duplicate sources", function() {
+  it("should prevent duplicate sources", function() {
     var s = sig()
     var t = sig()
     watch(t, s)
@@ -495,7 +447,7 @@ describe("sig", function() {
     assert.equal(t.sources.length, 1)
   })
 
-  it.skip("should prevent duplicate targets", function() {
+  it("should prevent duplicate targets", function() {
     var s = sig()
     var t = sig()
     watch(t, s)
@@ -503,15 +455,7 @@ describe("sig", function() {
     assert.equal(s.targets.length, 1)
   })
 
-  it.skip("should prevent duplicate dependencies", function() {
-    var s = sig()
-    var t = sig()
-    depend(t, s)
-    depend(t, s)
-    assert.equal(s.dependants.length, 1)
-  })
-
-  it.skip("should act as an identit.skipy for existing signals", function() {
+  it("should act as an indentity for existing signals", function() {
     var s = sig()
     assert.strictEqual(sig(s), s)
   })
@@ -528,7 +472,7 @@ describe("sig", function() {
       (assert.deepEqual, [1, 2, 3, 4])
   })
 
-  it.skip("should support cleanup hooks", function() {
+  it("should support cleanup hooks", function() {
     var results = []
 
     var s = vv(sig())

@@ -61,6 +61,7 @@
 
 
   function reset(s) {
+    runCleanups(s)
     resetTargets(s)
     resetSources(s)
     resetProps(s)
@@ -195,6 +196,15 @@
 
   function cleanup(s, fn) {
     s.cleanups.push(fn)
+    return s
+  }
+
+
+  function runCleanups(s) {
+    var cleanups = s.cleanups
+    var n = cleanups.length
+    var i = -1
+    while (++i < n) cleanups[i].call(s, s)
     return s
   }
 
