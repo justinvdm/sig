@@ -350,36 +350,34 @@
 
 
   function all(values, fn) {
-    return sig(function() {
-      var out = sig()
-      var remaining = {}
-      var isArgs = isArguments(values)
-      values = copy(values)
+    var out = sig()
+    var remaining = {}
+    var isArgs = isArguments(values)
+    values = copy(values)
 
-      each(values, function(s, k) {
-        if (!isSig(s)) return
-        remaining[k] = true
-      })
-
-      if (isEmpty(remaining)) put(out, values)
-      else each(values, watcher)
-
-      function watcher(s, k) {
-        if (!isSig(s)) return
-        map(s, puts, k)
-      }
-
-      function puts(x, k) {
-        delete remaining[k]
-        values[k] = x
-        if (isEmpty(remaining)) put(out, copy(values))
-      }
-
-      if (!fn) return out
-      return isArgs
-        ? map(out, spread(fn))
-        : map(out, fn)
+    each(values, function(s, k) {
+      if (!isSig(s)) return
+      remaining[k] = true
     })
+
+    if (isEmpty(remaining)) put(out, values)
+    else each(values, function(s, k) {
+      if (!isSig(s)) return
+      var t = then(s, puts, k)
+      t = then(t, out)
+    })
+
+    if (!fn) return out
+    return isArgs
+      ? map(out, spread(fn))
+      : map(out, fn)
+
+    function puts(x, k) {
+      delete remaining[k]
+      values[k] = x
+      if (isEmpty(remaining)) put(this, copy(values))
+    }
+
   }
 
 

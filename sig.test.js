@@ -769,14 +769,14 @@ describe("sig", function() {
 
 
   describe(".all", function() {
-    it.skip("should support arrays with only non signals", function() {
+    it("should support arrays with only non signals", function() {
       vv([21, 22, 23])
        (all)
        (capture)
        (assert.deepEqual, [[21, 22, 23]])
     })
 
-    it.skip("should support objects with only non signals", function() {
+    it("should support objects with only non signals", function() {
       vv({
          a: 21,
          b: 22,
@@ -791,7 +791,7 @@ describe("sig", function() {
         }])
     })
 
-    it.skip("should support arrays with both signals and non-signals", function() {
+    it("should support arrays with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -815,7 +815,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 2, 23], [3, 2, 23], [3, 4, 23]])
     })
     
-    it.skip("should support objects with both signals and non-signals", function() {
+    it("should support objects with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -871,7 +871,7 @@ describe("sig", function() {
       }])
     })
 
-    it.skip("should output copies of a given array", function() {
+    it("should output copies of a given array", function() {
       var a = sig()
 
       var results = vv([a, 23])
@@ -889,7 +889,7 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it.skip("should output copies of a given object", function() {
+    it("should output copies of a given object", function() {
       var a = sig()
 
       var results = vv({
@@ -910,7 +910,7 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it.skip("should reset all its listeners when the out signal is reset", function() {
+    it("should reset all its listeners when the out signal is reset", function() {
       var a = sig()
       var b = sig()
       var s = all([a, b])
@@ -922,7 +922,7 @@ describe("sig", function() {
       assert(!b.targets.length)
     })
 
-    it.skip("should work with signals with non-empty buffers", function() {
+    it("should work with signals with non-empty buffers", function() {
       var a = sig()
       put(a, 1)
 
@@ -935,7 +935,7 @@ describe("sig", function() {
         (assert.deepEqual, [[1, 2]])
     })
 
-    it.skip("should handle errors from its source signals", function() {
+    it("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
       var b = sig()
@@ -954,7 +954,7 @@ describe("sig", function() {
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
 
-    it.skip("should support an up-front map function", function() {
+    it("should support an up-front map function", function() {
       vv([21, 22, 23])
         (all, function(values) {
           return values.concat(24)
@@ -963,7 +963,7 @@ describe("sig", function() {
         (assert.deepEqual, [[21, 22, 23, 24]])
     })
 
-    it.skip("should spread out arguments if an arguments object is given", function() {
+    it("should spread out arguments if an arguments object is given", function() {
       test(21, 22, 23)
 
       function test() {
