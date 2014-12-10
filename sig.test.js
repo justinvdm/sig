@@ -28,7 +28,7 @@ var sig = require('./sig'),
 function capture(s) {
   var values = []
 
-  map(s, function(x) {
+  then(s, function(t, x) {
     values.push(x)
   })
 
@@ -577,7 +577,7 @@ describe("sig", function() {
 
 
   describe(".limit", function() {
-    it.skip("should limit the given signal", function() {
+    it("should limit the given signal", function() {
       vv([1, 2, 3, 4, 5, 6])
         (sig)
         (limit, 3)
@@ -588,7 +588,7 @@ describe("sig", function() {
 
 
   describe(".once", function() {
-    it.skip("should limit a signal to its first output", function() {
+    it("should limit a signal to its first output", function() {
       vv([1, 2, 3, 4, 5, 6])
         (sig)
         (once)

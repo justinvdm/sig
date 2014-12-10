@@ -303,16 +303,11 @@
 
   function limit(s, n) {
     var i = 0
-    var t = sig()
     
-    t.receiver = function(x, t) {
+    return then(s, function(t, x) {
       if (++i > n) unwatch(t, s)
       else put(t, x)
-    }
-
-    watch(t, s)
-    resume(s)
-    return t
+    })
   }
 
 
