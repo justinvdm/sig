@@ -663,7 +663,7 @@ describe("sig", function() {
 
 
   describe(".any", function() {
-    it.skip("should support arrays with both signals and non-signals", function() {
+    it("should support arrays with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -687,7 +687,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 0], [2, 1], [3, 0], [4, 1]])
     })
     
-    it.skip("should support objects with both signals and non-signals", function() {
+    it("should support objects with both signals and non-signals", function() {
       var a = sig()
       var b = sig()
 
@@ -715,7 +715,7 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it.skip("should reset all its listeners when the out signal is reset", function() {
+    it("should reset all its listeners when the out signal is reset", function() {
       var a = sig()
       var b = sig()
       var s = any([a, b])
@@ -727,7 +727,7 @@ describe("sig", function() {
       assert(!b.targets.length)
     })
 
-    it.skip("should handle errors from its source signals", function() {
+    it("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
       var b = sig()
@@ -746,7 +746,7 @@ describe("sig", function() {
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
 
-    it.skip("should support an up-front map function", function() {
+    it("should support an up-front map function", function() {
       vv([1, 2].map(ensure))
         (any, function(v, i) {
           return [v + 1, i]
@@ -755,7 +755,7 @@ describe("sig", function() {
         (assert.deepEqual, [[2, 0], [3, 1]])
     })
 
-    it.skip("should support argument objects", function() {
+    it("should support argument objects", function() {
       function test() {
         vv(arguments)
           (any)

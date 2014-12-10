@@ -330,23 +330,22 @@
 
 
   function any(values, fn) {
-    return sig(function() {
-      var out = sig()
-      if (isArguments(values)) values = slice(values)
+    var out = sig()
+    if (isArguments(values)) values = slice(values)
 
-      each(values, function(s, k) {
-        if (!isSig(s)) return
-        map(s, puts, k)
-      })
-
-      function puts(x, k) {
-        put(out, [x, k])
-      }
-
-      return fn
-        ? map(out, spread(fn))
-        : out
+    each(values, function(s, k) {
+      if (!isSig(s)) return
+      var t = then(s, puts, k)
+      t = then(t, out)
     })
+
+    return fn
+      ? map(out, spread(fn))
+      : out
+
+    function puts(x, k) {
+      put(this, [x, k])
+    }
   }
 
 
