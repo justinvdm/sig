@@ -275,14 +275,14 @@
 
   function then(s, obj) {
     return typeof obj == 'function'
-      ? thenFn(s, obj)
-      : thenSig(s, obj)
+      ? thenFn.apply(this, arguments)
+      : thenSig.apply(this, arguments)
   }
 
 
   function thenFn(s, fn) {
     var t = sig()
-    t.receiver = fn
+    t.receiver = prime(slice(arguments, 2), fn)
     return thenSig(s, t)
   }
 
@@ -294,20 +294,16 @@
 
 
   function map(s, fn) {
-    var args = slice(arguments, 2)
-
-    return then(s, function(x) {
-      put(this, fn.apply(this, [x].concat(args)))
-    })
+    return then(s, prime(slice(arguments, 2), function(x) {
+      put(this, fn.apply(this, arguments))
+    }))
   }
 
 
   function filter(s, fn) {
-    var args = slice(arguments, 2)
-      
-    return then(s, function(x) {
-      if (fn.apply(this, [x].concat(args))) put(this, x)
-    })
+    return then(s, prime(slice(arguments, 2), function(x) {
+      if (fn.apply(this, arguments)) put(this, x)
+    }))
   }
 
 
@@ -396,6 +392,15 @@
   function spread(fn) {
     return function(values) {
       return fn.apply(fn, values.concat(slice(arguments, 1)))
+    }
+  }
+
+
+  function prime(args, fn) {
+    if (!args.length) return fn
+
+    return function(x) {
+      return fn.apply(this, [x].concat(args))
     }
   }
 

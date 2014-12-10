@@ -508,6 +508,38 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3])
   })
 
+  describe(".then", function() {
+    it("should support connecting to an existing target", function() {
+      var s = sig()
+      var t = sig()
+      then(s, t)
+      assert.deepEqual(s.targets, [t])
+      assert.deepEqual(t.sources, [s])
+    })
+
+    it("should support creating and connecting to a new target", function() {
+      var s = sig()
+      var t = then(s, receiver)
+      assert.deepEqual(s.targets, [t])
+      assert.deepEqual(t.sources, [s])
+      assert.strictEqual(t.receiver, receiver)
+      function receiver() {}
+    })
+
+    it("should allow extra arguments to be given", function(done) {
+      var s = sig()
+
+      then(s, function(a, b, c) {
+        assert.equal(a, 1)
+        assert.equal(b, 2)
+        assert.equal(c, 3)
+        done()
+      }, 2, 3)
+
+      put(s, 1)
+    })
+  })
+
   describe(".except", function(done) {
     it("should create a signal that catches errors", function(done) {
       var s = sig()
