@@ -25,6 +25,7 @@
   sig.spread = spread
   sig.isSig = isSig
   sig.nil = nil
+  sig.val = val
 
 
   function sig(obj) {
@@ -56,6 +57,7 @@
 
   function resetProps(s) {
     s.paused = true
+    s.sticky = false
     s.current = nil
     s.buffer = []
     s.cleanups = []
@@ -153,6 +155,7 @@
     addSource(t, s)
     addTarget(s, t)
     refreshSources(s)
+    if (s.sticky && s.current !== nil) receive(t, s.current)
     if (s.eager && firstTarget) resume(s)
     return t
   }
@@ -263,6 +266,7 @@
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], x)
+    s.current = x
     return s
   }
 
@@ -290,6 +294,14 @@
   function thenSig(s, t) {
     watch(t, s)
     return t
+  }
+
+
+  function val(x) {
+    var s = sig()
+    s.sticky = true
+    if (arguments.length) put(s, x)
+    return s
   }
 
 

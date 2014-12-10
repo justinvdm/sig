@@ -1002,9 +1002,8 @@ describe("sig", function() {
 
 
   describe(".val", function() {
-    it.skip("should hold onto the last value given to the signal", function() {
+    it("should hold onto the last value given to the signal", function() {
       var s = val(2)
-      resume(s)
 
       var c1 = capture(s)
       assert.deepEqual(c1, [2])
