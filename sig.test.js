@@ -979,7 +979,7 @@ describe("sig", function() {
 
 
   describe(".ensure", function() {
-    it.skip("should simply pass through existing signals", function() {
+    it("should simply pass through existing signals", function() {
       vv([1, 2])
         (sig)
         (ensure)
@@ -987,7 +987,7 @@ describe("sig", function() {
         (assert.deepEqual, [1, 2])
     })
 
-    it.skip("should create a singleton signal from non-signals", function() {
+    it("should create a singleton signal from non-signals", function() {
       vv(23)
         (ensure)
         (capture)
