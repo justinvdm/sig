@@ -156,8 +156,8 @@
     addSource(t, s)
     addTarget(s, t)
     refreshSources(s)
-    if (s.sticky && s.current !== nil) receive(t, s.current)
     if (s.eager && firstTarget) resume(s)
+    else if (s.sticky && s.current !== nil) receive(t, s.current)
     return t
   }
 
@@ -170,6 +170,7 @@
 
 
   function put(s, x) {
+    s.current = x
     if (s.paused) buffer(s, x)
     else send(s, x)
     return s
@@ -267,7 +268,6 @@
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], x)
-    s.current = x
     return s
   }
 

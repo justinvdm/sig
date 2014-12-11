@@ -1002,7 +1002,7 @@ describe("sig", function() {
 
 
   describe(".val", function() {
-    it("should hold onto the last value given to the signal", function() {
+    it("should hold last value given to the signal", function() {
       var s = val(2)
 
       var c1 = capture(s)
@@ -1018,6 +1018,19 @@ describe("sig", function() {
       assert.deepEqual(c1, [2, 3, 4])
       assert.deepEqual(c2, [3, 4])
       assert.deepEqual(c3, [4])
+    })
+
+    it("should work for eager signals", function() {
+      var s = val(2)
+      s.eager = true
+      assert.deepEqual(capture(s), [2])
+    })
+
+    it("should work for non-eager signals", function() {
+      var s = val(2)
+      s.eager = false
+      resume(s)
+      assert.deepEqual(capture(s), [2])
     })
   })
 })
