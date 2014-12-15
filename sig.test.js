@@ -22,7 +22,9 @@ var sig = require('./sig'),
     all = sig.all,
     spread = sig.spread,
     isSig = sig.isSig,
-    val = sig.val
+    val = sig.val,
+    depend = sig.depend,
+    undepend = sig.undepend
 
 
 function capture(s) {
@@ -33,6 +35,13 @@ function capture(s) {
   })
 
   return values
+}
+
+
+function contains(arr, values) {
+  return !!values.some(function(v) {
+    return arr.indexOf(v) > -1
+  })
 }
 
 
@@ -506,6 +515,36 @@ describe("sig", function() {
     assert(!results.length)
     reset(s)
     assert.deepEqual(results, [1, 2, 3])
+  })
+
+  describe(".depend",function() {
+    it("should reset the target signal with the source signal", function() {
+      var s = sig()
+      var t = sig()
+      depend(t, s)
+
+      var results = capture(t)
+      put(t, 23)
+      assert.deepEqual(results, [23])
+
+      reset(s)
+      put(t, 3)
+      assert.deepEqual(results, [23])
+    })
+  })
+
+  describe(".undepend", function() {
+    it("should remove the given dependency", function() {
+      var s = sig()
+      var t = sig()
+      var u = sig()
+      depend(t, s)
+      depend(u, s)
+
+      assert.deepEqual(s.dependents, [t, u])
+      undepend(t, s)
+      assert.deepEqual(s.dependents, [u])
+    })
   })
 
   describe(".then", function() {

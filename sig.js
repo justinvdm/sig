@@ -27,6 +27,8 @@
   sig.isSig = isSig
   sig.nil = nil
   sig.val = val
+  sig.depend = depend
+  sig.undepend = undepend
 
 
   function sig(obj) {
@@ -36,6 +38,7 @@
       type: 'sig',
       targets: [],
       sources: [],
+      dependents: [],
       eager: true,
       receiver: putReceiver,
       errorHandler: raiseHandler
@@ -69,9 +72,17 @@
 
   function reset(s) {
     runCleanups(s)
+    resetDependents(s)
     resetTargets(s)
     resetSources(s)
     resetProps(s)
+    return s
+  }
+
+
+  function resetDependents(s) {
+    s.dependents.forEach(reset)
+    s.dependents = []
     return s
   }
 
@@ -166,6 +177,19 @@
     rmSource(t, s)
     rmTarget(s, t)
     return t
+  }
+
+
+  function depend(t, s) {
+    undepend(t, s)
+    s.dependents.push(t)
+    return s
+  }
+
+
+  function undepend(t, s) {
+    rm(s.dependents, t)
+    return s
   }
 
 
