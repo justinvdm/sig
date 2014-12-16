@@ -29,6 +29,7 @@
   sig.val = val
   sig.depend = depend
   sig.undepend = undepend
+  sig.redir = redir
 
 
   function sig(obj) {
@@ -261,7 +262,7 @@
 
   function except(s, fn) {
     var t = sig()
-    t.errorHandler = fn
+    t.errorHandler = prime(slice(arguments, 2), fn)
     source(t, s)
     return t
   }
@@ -356,28 +357,40 @@
   }
 
 
+  function redir(s, t) {
+    var u
+    u = then(s, puts, t)
+    u = except(u, raises, t)
+    depend(u, t)
+    return u
+  }
+
+
+  function puts(x, s) {
+    put(s, x)
+  }
+
+
+  function raises(e, s) {
+    raise(s, e)
+  }
+
+
   function any(values, fn) {
     var out = sig()
     if (isArguments(values)) values = slice(values)
 
     each(values, function(s, k) {
       if (!isSig(s)) return
-      var t
-      t = then(s, puts, k)
-      t = except(t, raises)
-      depend(t, out)
+      redir(map(s, next, k), out)
     })
 
     return fn
       ? map(out, spread(fn))
       : out
 
-    function raises(e) {
-      raise(out, e)
-    }
-
-    function puts(x, k) {
-      put(out, [x, k])
+    function next(x, k) {
+      return [x, k]
     }
   }
 
@@ -396,10 +409,7 @@
     if (isEmpty(remaining)) put(out, values)
     else each(values, function(s, k) {
       if (!isSig(s)) return
-      var t
-      t = then(s, puts, k)
-      t = except(t, raises)
-      depend(t, out)
+      redir(then(s, next, k), out)
     })
 
     if (!fn) return out
@@ -407,14 +417,10 @@
       ? map(out, spread(fn))
       : map(out, fn)
 
-    function raises(e) {
-      raise(out, e)
-    }
-
-    function puts(x, k) {
+    function next(x, k) {
       delete remaining[k]
       values[k] = x
-      if (isEmpty(remaining)) put(out, copy(values))
+      if (isEmpty(remaining)) put(this, copy(values))
     }
   }
 

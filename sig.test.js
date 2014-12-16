@@ -24,7 +24,8 @@ var sig = require('./sig'),
     isSig = sig.isSig,
     val = sig.val,
     depend = sig.depend,
-    undepend = sig.undepend
+    undepend = sig.undepend,
+    redir = sig.redir
 
 
 function capture(s) {
@@ -541,6 +542,7 @@ describe("sig", function() {
     })
   })
 
+
   describe(".except", function(done) {
     it("should create a signal that catches errors", function(done) {
       var s = sig()
@@ -553,6 +555,18 @@ describe("sig", function() {
 
       assert.notStrictEqual(t, s)
       raise(s, e)
+    })
+
+    it("should support extra arguments", function(done) {
+      var s = sig()
+
+      except(s, function(caughtErr, a, b) {
+        assert.strictEqual(a, 1)
+        assert.strictEqual(b, 2)
+        done()
+      }, 1, 2)
+
+      raise(s, new Error(':/'))
     })
   })
 
@@ -1032,6 +1046,62 @@ describe("sig", function() {
       s.eager = false
       resume(s)
       assert.deepEqual(capture(s), [2])
+    })
+  })
+
+  describe(".redir", function() {
+    it("should redirect signal output", function() {
+      var s = sig()
+      var t = sig()
+      var results = capture(t)
+
+      redir(s, t)
+
+      vv(s)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should redirect signal errors", function(done) {
+      var s = sig()
+      var t = sig()
+      var e = new Error(':/') 
+
+      redir(s, t)
+
+      except(t, function(nextE) {
+        assert.strictEqual(e, nextE)
+        done()
+      })
+
+      raise(s, e)
+    })
+
+    it("should not redirect after the target has been reset", function() {
+      var s = sig()
+      var t = sig()
+      var results = capture(t)
+
+      redir(s, t)
+
+      vv(s)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      assert.deepEqual(results, [1, 2, 3])
+
+      reset(t)
+
+      vv(s)
+        (put, 4)
+        (put, 5)
+        (put, 6)
+
+      assert.deepEqual(results, [1, 2, 3])
     })
   })
 })
