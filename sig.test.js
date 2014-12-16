@@ -5,8 +5,8 @@ var vv = require('drainpipe')
 var sig = require('./sig'),
     reset = sig.reset,
     put = sig.put,
-    watch = sig.watch,
-    unwatch = sig.unwatch,
+    source = sig.source,
+    unsource = sig.unsource,
     pause = sig.pause,
     resume = sig.resume,
     cleanup = sig.cleanup,
@@ -80,68 +80,53 @@ describe("sig", function() {
     var d = sig()
     var e = sig()
 
-    then(c, b)
-    then(d, b)
-    then(b, a)
+    then(a, b)
+    then(b, c)
+    then(b, d)
 
-    // c     d     e
+    //       a
+    //       |
+    //       v
+    //  ---- b      
     // |     |
-    // |     v
-    //  ---> b      
-    //       |
-    //       v
-    //       a
-    assert.deepEqual(a.sources, [b])
-    assert.deepEqual(b.targets, [a])
-    assert.deepEqual(b.sources, [c, d])
-    assert.deepEqual(c.targets, [b])
-    assert.deepEqual(d.targets, [b])
-
-    reset(c)
-
+    // v     v
     // c     d     e
-    //       |
-    //       v
-    //       b      
-    //       |
-    //       v
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [c, d])
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
+
+    reset(a)
+
     //       a
-    assert.deepEqual(a.sources, [b])
-    assert.deepEqual(b.targets, [a])
-    assert.deepEqual(b.sources, [d])
-    assert(!c.targets.length)
-    assert.deepEqual(d.targets, [b])
-
-    reset(d)
-
-    // c     d     e
     //        
-    //
-    //       b   
-    //     
-    //     
-    //       a
-    assert(!a.sources.length)
-    assert(!b.sources.length)
-    assert(!b.targets.length)
-    assert(!c.targets.length)
-    assert(!d.targets.length)
-
-    then(e, b)
-
+    //        
+    //       b      
+    //        
+    //        
     // c     d     e
-    //             |
-    //             |
-    //       b <--- 
-    //     
-    //     
-    //       a
-    assert(!a.sources.length)
+    assert(!a.targets.length)
+    assert.strictEqual(b.source, null)
     assert(!b.targets.length)
-    assert.deepEqual(b.sources, [e])
-    assert(!c.targets.length)
-    assert(!d.targets.length)
-    assert.deepEqual(e.targets, [b])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
+
+    then(b, e)
+
+    //       a
+    //        
+    //        
+    //       b ----
+    //             |
+    //             v
+    // c     d     e
+    assert(!a.targets.length)
+    assert.strictEqual(b.source, null)
+    assert.deepEqual(b.targets, [e])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
+    assert.strictEqual(e.source, b)
   })
 
   it("should support bottom-up signal resets", function() {
@@ -163,10 +148,10 @@ describe("sig", function() {
     // v     v
     // c     d     e
     assert.deepEqual(a.targets, [b])
-    assert.deepEqual(b.sources, [a])
+    assert.deepEqual(b.source, a)
     assert.deepEqual(b.targets, [c, d])
-    assert.deepEqual(c.sources, [b])
-    assert.deepEqual(d.sources, [b])
+    assert.deepEqual(c.source, b)
+    assert.deepEqual(d.source, b)
 
     reset(c)
 
@@ -178,10 +163,10 @@ describe("sig", function() {
     //       v
     // c     d     e
     assert.deepEqual(a.targets, [b])
-    assert.deepEqual(b.sources, [a])
+    assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [d])
-    assert.deepEqual(c.sources, [b])
-    assert.deepEqual(d.sources, [b])
+    assert.strictEqual(c.source, null)
+    assert.deepEqual(d.source, b)
 
     reset(d)
 
@@ -193,10 +178,10 @@ describe("sig", function() {
     //        
     // c     d     e
     assert(!a.targets.length)
-    assert.deepEqual(b.sources, [a])
+    assert.deepEqual(b.source, a)
     assert(!b.targets.length)
-    assert.deepEqual(c.sources, [b])
-    assert.deepEqual(d.sources, [b])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
 
     then(b, e)
 
@@ -208,11 +193,11 @@ describe("sig", function() {
     //             v
     // c     d     e
     assert.deepEqual(a.targets, [b])
-    assert.deepEqual(b.sources, [a])
+    assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [e])
-    assert.deepEqual(c.sources, [b])
-    assert.deepEqual(d.sources, [b])
-    assert.deepEqual(e.sources, [b])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
+    assert.strictEqual(e.source, b)
   })
 
   it("should support error handling", function(done) {
@@ -295,7 +280,7 @@ describe("sig", function() {
       done()
     }
 
-    watch(t, s)
+    source(t, s)
     put(s)
   })
 
@@ -340,40 +325,37 @@ describe("sig", function() {
   })
 
   it("should support eager signals", function() {
-    var s = sig()
-    var t = sig()
-    var u = sig()
-
-    s.eager = true
-    t.eager = false
-
-    assert(s.paused)
-    assert(t.paused)
-
-    then(s, u)
-    assert(!s.paused)
-
-    then(t, u)
-    assert(t.paused)
-  })
-
-  it("should allow multiple source signals", function() {
-    var results = []
     var s1 = sig()
     var s2 = sig()
+    var t1 = sig()
+    var t2 = sig()
 
+    s1.eager = true
+    s2.eager = false
+
+    assert(s1.paused)
+    assert(s2.paused)
+
+    then(s1, t1)
+    assert(!s1.paused)
+
+    then(s2, t2)
+    assert(s2.paused)
+  })
+
+  it("should not allow multiple source signals", function() {
+    var results = []
     var t = sig()
-    t.receiver = function(x) { results.push(x) }
 
-    watch(t, s1)
-    watch(t, s2)
+    function addSource() {
+      source(t, sig())
+    }
 
-    put(s1, 1)
-    put(s2, 2)
-    put(s1, 3)
-    put(s2, 4)
+    addSource()
 
-    assert.deepEqual(results, [1, 2, 3, 4])
+    assert.throws(
+        addSource,
+        /Cannot set signal's source, signal already has a source/)
   })
 
   it("should allow multiple target signals", function() {
@@ -402,20 +384,16 @@ describe("sig", function() {
 
   it("should allow a target signal to be reset", function() {
     var results = []
-    var s1 = sig()
-    var s2 = sig()
+    var s = sig()
 
     var t = sig()
     t.receiver = function(x) { results.push(x) }
 
-    then(s1, t)
-    then(s2, t)
+    then(s, t)
     reset(t)
 
-    put(s1, 1)
-    put(s2, 2)
-    put(s1, 3)
-    put(s2, 4)
+    put(s, 1)
+    put(s, 2)
 
     assert(!results.length)
   })
@@ -445,15 +423,15 @@ describe("sig", function() {
     assert(!results2.length)
   })
 
-  it("should allow a signal to stop watching another", function() {
+  it("should allow a signal to stop sourceing another", function() {
     var results = []
     var s = sig()
 
     var t = sig()
     t.receiver = function(x) { results.push(x) }
 
-    watch(t, s)
-    unwatch(t, s)
+    source(t, s)
+    unsource(t, s)
 
     vv(s)
       (put, 1)
@@ -462,22 +440,6 @@ describe("sig", function() {
       (put, 4)
 
     assert(!results.length)
-  })
-
-  it("should prevent duplicate sources", function() {
-    var s = sig()
-    var t = sig()
-    watch(t, s)
-    watch(t, s)
-    assert.equal(t.sources.length, 1)
-  })
-
-  it("should prevent duplicate targets", function() {
-    var s = sig()
-    var t = sig()
-    watch(t, s)
-    watch(t, s)
-    assert.equal(s.targets.length, 1)
   })
 
   it("should act as an indentity for existing signals", function() {
@@ -553,14 +515,14 @@ describe("sig", function() {
       var t = sig()
       then(s, t)
       assert.deepEqual(s.targets, [t])
-      assert.deepEqual(t.sources, [s])
+      assert.strictEqual(t.source, s)
     })
 
     it("should support creating and connecting to a new target", function() {
       var s = sig()
       var t = then(s, receiver)
       assert.deepEqual(s.targets, [t])
-      assert.deepEqual(t.sources, [s])
+      assert.strictEqual(t.source, s)
       assert.strictEqual(t.receiver, receiver)
       function receiver() {}
     })

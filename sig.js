@@ -8,8 +8,8 @@
   sig.put = put
   sig.putMany = putMany
   sig.receive = receive
-  sig.watch = watch
-  sig.unwatch = unwatch
+  sig.source = source
+  sig.unsource = unsource
   sig.pause = pause
   sig.resume = resume
   sig.cleanup = cleanup
@@ -35,10 +35,10 @@
     if (isSig(obj)) return obj
 
     var s = resetProps({
-      type: 'sig',
       targets: [],
-      sources: [],
+      source: null,
       dependents: [],
+      type: 'sig',
       eager: true,
       receiver: putReceiver,
       errorHandler: raiseHandler
@@ -73,9 +73,24 @@
   function reset(s) {
     runCleanups(s)
     resetDependents(s)
+    resetSource(s)
     resetTargets(s)
-    resetSources(s)
     resetProps(s)
+    return s
+  }
+
+
+  function resetSource(t) {
+    disconnectSources(t)
+    unsetSource(t)
+    return t
+  }
+
+
+  function resetTargets(s) {
+    s.targets.forEach(unsetSource)
+    s.targets.forEach(resetTargets)
+    s.targets = []
     return s
   }
 
@@ -87,33 +102,25 @@
   }
 
 
-  function resetTargets(s) {
-    var i = -1
-    var targets = s.targets
-    var n = targets.length
-    var t
+  function disconnectSources(t) {
+    var s = t.source
 
-    while (++i < n) {
-      t = targets[i]
-      rmSource(t, s)
-      if (t.targets.length && !t.sources.length) resetTargets(t)
+    if (s) {
+      rmTarget(s, t)
+      if (!s.targets.length) disconnectSources(s)
     }
 
-    s.targets = []
-    return s
+    return t
   }
 
 
-  function resetSources(t) {
-    var i = -1
-    var sources = t.sources
-    var n = sources.length
-    var s
+  function reconnectSources(t) {
+    var s = t.source
 
-    while (++i < n) {
-      s = sources[i]
+    if (s) {
       rmTarget(s, t)
-      if (s.sources.length && !s.targets.length) resetSources(s)
+      addTarget(s, t)
+      reconnectSources(s)
     }
 
     return t
@@ -121,7 +128,6 @@
 
 
   function addTarget(s, t) {
-    rmTarget(s, t)
     s.targets.push(t)
     return s
   }
@@ -133,49 +139,33 @@
   }
 
 
-  function addSource(t, s) {
-    rmSource(t, s)
-    t.sources.push(s)
+  function setSource(t, s) {
+    if (t.source) raise(t, new Error(
+      "Cannot set signal's source, signal already has a source"))
+    else t.source = s
     return t
   }
 
 
-  function rmSource(t, s) {
-    rm(t.sources, s)
+  function unsetSource(t) {
+    t.source = null
     return t
   }
 
 
-  function refreshSources(t) {
-    var i = -1
-    var sources = t.sources
-    var n = sources.length
-    var s
-
-    while (++i < n) {
-      s = sources[i]
-      addTarget(s, t)
-      refreshSources(s)
-    }
-
-    return t
-  }
-
-
-  function watch(t, s) {
+  function source(t, s) {
     var firstTarget = !s.targets.length
-    addSource(t, s)
+    setSource(t, s)
     addTarget(s, t)
-    refreshSources(s)
+    reconnectSources(s)
     if (s.eager && firstTarget) resume(s)
     else if (s.sticky && s.current !== nil) receive(t, s.current)
     return t
   }
 
 
-  function unwatch(t, s) {
-    rmSource(t, s)
-    rmTarget(s, t)
+  function unsource(t) {
+    resetSource(t)
     return t
   }
 
@@ -272,7 +262,7 @@
   function except(s, fn) {
     var t = sig()
     t.errorHandler = fn
-    watch(t, s)
+    source(t, s)
     return t
   }
 
@@ -317,7 +307,7 @@
 
 
   function thenSig(s, t) {
-    watch(t, s)
+    source(t, s)
     return t
   }
 
@@ -348,7 +338,7 @@
     var i = 0
     
     return then(s, function(x) {
-      if (++i > n) unwatch(this, s)
+      if (++i > n) unsource(this)
       else put(this, x)
     })
   }
@@ -372,16 +362,22 @@
 
     each(values, function(s, k) {
       if (!isSig(s)) return
-      var t = then(s, puts, k)
-      t = then(t, out)
+      var t
+      t = then(s, puts, k)
+      t = except(t, raises)
+      depend(t, out)
     })
 
     return fn
       ? map(out, spread(fn))
       : out
 
+    function raises(e) {
+      raise(out, e)
+    }
+
     function puts(x, k) {
-      put(this, [x, k])
+      put(out, [x, k])
     }
   }
 
@@ -400,8 +396,10 @@
     if (isEmpty(remaining)) put(out, values)
     else each(values, function(s, k) {
       if (!isSig(s)) return
-      var t = then(s, puts, k)
-      t = then(t, out)
+      var t
+      t = then(s, puts, k)
+      t = except(t, raises)
+      depend(t, out)
     })
 
     if (!fn) return out
@@ -409,12 +407,15 @@
       ? map(out, spread(fn))
       : map(out, fn)
 
+    function raises(e) {
+      raise(out, e)
+    }
+
     function puts(x, k) {
       delete remaining[k]
       values[k] = x
-      if (isEmpty(remaining)) put(this, copy(values))
+      if (isEmpty(remaining)) put(out, copy(values))
     }
-
   }
 
 
