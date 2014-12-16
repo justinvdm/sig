@@ -173,13 +173,13 @@
   function depend(t, s) {
     undepend(t, s)
     s.dependents.push(t)
-    return s
+    return t
   }
 
 
   function undepend(t, s) {
     rm(s.dependents, t)
-    return s
+    return t
   }
 
 
