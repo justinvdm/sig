@@ -6,6 +6,7 @@
 
   sig.reset = reset
   sig.put = put
+  sig.to = to
   sig.putMany = putMany
   sig.receive = receive
   sig.source = source
@@ -359,14 +360,14 @@
 
   function redir(s, t) {
     var u
-    u = then(s, puts, t)
+    u = then(s, to, t)
     u = except(u, raises, t)
     depend(u, t)
     return u
   }
 
 
-  function puts(x, s) {
+  function to(x, s) {
     put(s, x)
   }
 

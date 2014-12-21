@@ -25,7 +25,8 @@ var sig = require('./sig'),
     val = sig.val,
     depend = sig.depend,
     undepend = sig.undepend,
-    redir = sig.redir
+    redir = sig.redir,
+    to = sig.to
 
 
 function capture(s) {
@@ -1102,6 +1103,17 @@ describe("sig", function() {
         (put, 6)
 
       assert.deepEqual(results, [1, 2, 3])
+    })
+  })
+
+  describe(".to", function() {
+    it("should put the given value onto the given signal", function() {
+      var s = sig()
+      to(1, s)
+      to(2, s)
+      to(3, s)
+
+      assert.deepEqual(capture(s), [1, 2, 3])
     })
   })
 })
