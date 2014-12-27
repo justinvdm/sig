@@ -92,10 +92,15 @@
 
 
   function resetTargets(s) {
-    s.targets.forEach(unsetSource)
-    s.targets.forEach(resetTargets)
-    s.targets = []
+    s.targets.forEach(resetTarget)
     return s
+  }
+
+
+  function resetTarget(t) {
+    t.targets.forEach(resetTarget)
+    reset(t)
+    return t
   }
 
 
