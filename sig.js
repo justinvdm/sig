@@ -3,6 +3,7 @@
 
   var isArray = Array.isArray
   var _slice = Array.prototype.slice
+  var _log = console.log
 
   sig.reset = reset
   sig.put = put
@@ -31,6 +32,7 @@
   sig.depend = depend
   sig.undepend = undepend
   sig.redir = redir
+  sig.log = log
 
 
   function sig(obj) {
@@ -434,6 +436,11 @@
     return function(values) {
       return fn.apply(fn, values.concat(slice(arguments, 1)))
     }
+  }
+
+
+  function log() {
+    return _log.apply(console, arguments)
   }
 
 
