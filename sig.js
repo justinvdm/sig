@@ -246,8 +246,8 @@
 
   function handleError(s, e) {
     s.error = e
-    s.errorHandler.call(s, e)
-    s.error = null
+    try { s.errorHandler.call(s, e) }
+    finally { s.error = null }
     return s
   }
 

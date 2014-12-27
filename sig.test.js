@@ -215,6 +215,15 @@ describe("sig", function() {
     assert.throws(thrower, /o_O/)
   })
 
+  it("should unset errors even if error handlers throw errors", function() {
+    var s = sig()
+
+    try { raise(s, 'o_O') }
+    catch (e) {}
+
+    assert.strictEqual(s.error, null)
+  })
+
   it("should allow handlers of ending signals to rethrow errors", function() {
     var s = sig()
 
