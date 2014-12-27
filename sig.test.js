@@ -659,21 +659,13 @@ describe("sig", function() {
   describe(".spread", function() {
     it("should spread an array out as a function's arguments", function() {
       vv([1, 2, 3])
-        (spread(function(a, b, c) {
+        (spread, function(a, b, c) {
           return [a + 1, b + 1, c + 1]
-        }))
-        (spread(function(a, b, c) {
+        })
+        (spread, function(a, b, c) {
           return [a * 2, b * 2, c * 2]
-        }))
+        })
         (assert.deepEqual, [4, 6, 8])
-    })
-
-    it("should append additional args", function() {
-      var fn = spread(function(a, b, c, d) {
-        return [a, b, c, d]
-      })
-
-      assert.deepEqual(fn([1, 2], 3, 4), [1, 2, 3, 4])
     })
   })
 

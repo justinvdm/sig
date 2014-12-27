@@ -388,7 +388,7 @@
     })
 
     return fn
-      ? map(out, spread(fn))
+      ? map(out, spread, fn)
       : out
 
     function next(x, k) {
@@ -416,7 +416,7 @@
 
     if (!fn) return out
     return isArgs
-      ? map(out, spread(fn))
+      ? map(out, spread, fn)
       : map(out, fn)
 
     function next(x, k) {
@@ -432,10 +432,8 @@
   }
 
 
-  function spread(fn) {
-    return function(values) {
-      return fn.apply(fn, values.concat(slice(arguments, 1)))
-    }
+  function spread(args, fn) {
+    return fn.apply(this, args)
   }
 
 
