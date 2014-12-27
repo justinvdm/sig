@@ -51,13 +51,190 @@ $ bower install sig
 
 ### sources and targets
 
+Signals can have at most one source and multiple targets, where values and errors flow from the source to its targets.
+
 ### value propogation
 
-### error propogation
+Values are sent from a source signal to its target signals using `put`. `put` sends the given value to the receiver function of each of its targets. `then` is used to create a new target signal with a given receiver function. To further propogate the value, the receiver functions should use `put` to send the value from the relevant signal  (provided as the `this` context) to its target signals.
+
+```javascript
+var s = sig()
+
+var t1 = then(s, function(v) { put(this, v + 1) })
+var u1 = then(t1, log)
+
+var t2 = then(s, function(v) { put(this, v * 2) })
+var u2 = then(t2, log)
+
+put(s, 3)
+// -- s --       
+// | 3   | 3
+// v     v
+// t1    t2
+// | 4   | 6
+// v     v
+// u1    u2
+```
+
+### error handling
+
+Errors are raised for a signal using `raise`. If a signal's error handler re-raises the error using `raise` itself, the error is propogated to each of the signal's target signals. If a signal's error handler re-raises an error and the signal has no targets, the error is thrown. `except` is used to create a new target signal with a given error handling function.
+
+```javascript
+var s = sig()
+
+var t1 = except(s, function(e) { raise(this, e) })
+var u1 = except(t1, log)
+
+var t2 = except(s, function(e) { raise(this, e) })
+var u2 = except(t2, log)
+
+raise(s, new Error('o_O'))
+// ---- s ----       
+// | o_O     | o_O
+// v         v
+// t1        t2
+// | o_O     | o_O
+// v         v
+// u1        u2
+```
+
+Note that error handlers should always be used as a way to catch and process errors and not `try`-`catch` blocks, since signal processing can occur asynchronously (depending on how sig is being used). The reason for throwing unhandled errors at the end of signal chains is to break execution instead of allowing the error to get silently ignored.
 
 ### pausing and resuming
 
-### deconstruction
+When a signal is paused using `pause`, any values given to it by `put` are buffered. When the signal is resumed using `resume`, any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
+
+```javascript
+var s = sig()
+var t = then(s, log)
+
+pause(s)
+put(s, 21)
+put(s, 23)
+
+resume(s)
+// 21
+// 23
+```
+
+### eager signals
+
+Eager signals are signals that start off paused, but resume after their first target signal is added. Note that signals are eager by default.
+
+```javascript
+var s = sig()
+put(s, 21)
+put(s, 23)
+
+then(s, log)
+// 21
+// 23
+```
+
+A signal can be set to non-eager by settings the signal's `eager` property to `false`.
+
+```javascript
+var s = sig()
+s.eager = false
+```
+
+### disposal
+
+When a signal is no longer needed, `reset` should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting the signal's transitive sources and targets is necessary for memory collection, and is slightly more involved.
+
+Note that creating signals without reseting them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
+
+#### top-down resets
+
+When a signal is reset, any chain of signals originating from it will no longer receive values, so every signal in the chain can be reset.
+
+```javascript
+var a = sig()
+var b = sig()
+var c = sig()
+var d = sig()
+var e = sig()
+
+then(a, b)
+then(b, c)
+then(b, d)
+//       a
+//       |
+//       v
+//  ---- b      
+// |     |
+// v     v
+// c     d     e
+
+reset(a)
+//       a
+//        
+//        
+//       b      
+//        
+//        
+// c     d     e
+
+then(b, e)
+//       a
+//        
+//        
+//       b ----
+//             |
+//             v
+// c     d     e
+```
+
+#### bottom-up resets
+
+When a signal is reset, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, unlike top-down resets, other signals in the chain cannot be reset, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets. Targets keep a reference to their source, so a signal chain will be restored if a new target gets added at the end of the chain.
+
+```javascript
+var a = sig()
+var b = sig()
+var c = sig()
+var d = sig()
+var e = sig()
+
+then(a, b)
+then(b, c)
+then(b, d)
+//       a
+//       |
+//       v
+//  ---- b      
+// |     |
+// v     v
+// c     d     e
+
+reset(c)
+//       a
+//       |
+//       v
+//       b      
+//       |
+//       v
+// c     d     e
+
+reset(d)
+//       a
+//        
+//        
+//       b      
+//        
+//        
+// c     d     e
+
+then(b, e)
+//       a
+//       |
+//       v
+//       b ----
+//             |
+//             v
+// c     d     e
+```
 
 ### dependencies
 
