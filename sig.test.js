@@ -40,13 +40,6 @@ function capture(s) {
 }
 
 
-function contains(arr, values) {
-  return !!values.some(function(v) {
-    return arr.indexOf(v) > -1
-  })
-}
-
-
 describe("sig", function() {
   it("should allow values to be sent through signals", function() {
     var src = sig()
@@ -346,7 +339,6 @@ describe("sig", function() {
   })
 
   it("should not allow multiple source signals", function() {
-    var results = []
     var t = sig()
 
     function addSource() {
