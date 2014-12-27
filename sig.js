@@ -340,8 +340,7 @@
     var i = 0
     
     return then(s, function(x) {
-      if (++i > n) unsource(this)
-      else put(this, x)
+      if (++i <= n) put(this, x)
     })
   }
 
