@@ -44,6 +44,7 @@
       dependents: [],
       type: 'sig',
       eager: true,
+      sticky: false,
       receiver: putReceiver,
       errorHandler: raiseHandler
     })
@@ -65,7 +66,6 @@
 
   function resetProps(s) {
     s.paused = true
-    s.sticky = false
     s.current = nil
     s.buffer = []
     s.cleanups = []
