@@ -35,13 +35,13 @@ vv(s)
 node:
 
 ```
-$ npm install sig
+$ npm install sig-js
 ```
 
 browser:
 
 ```
-$ bower install sig
+$ bower install sig-js
 ```
 
 ```html
