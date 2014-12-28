@@ -359,7 +359,7 @@
   }
 
 
-  function any(values, fn) {
+  function any(values) {
     var out = sig()
     if (isArguments(values)) values = slice(values)
 
@@ -367,10 +367,8 @@
       if (!isSig(s)) return
       redir(map(s, next, k), out)
     })
-
-    return fn
-      ? map(out, spread, fn)
-      : out
+    
+    return out
 
     function next(x, k) {
       return [x, k]
@@ -378,10 +376,9 @@
   }
 
 
-  function all(values, fn) {
+  function all(values) {
     var out = sig()
     var remaining = {}
-    var isArgs = isArguments(values)
     values = copy(values)
 
     each(values, function(s, k) {
@@ -395,10 +392,7 @@
       redir(then(s, next, k), out)
     })
 
-    if (!fn) return out
-    return isArgs
-      ? map(out, spread, fn)
-      : map(out, fn)
+    return out
 
     function next(x, k) {
       delete remaining[k]
