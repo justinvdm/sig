@@ -1,0 +1,21 @@
+{
+  "name": "sig-js",
+  "main": "sig.js",
+  "description": "high-level reactive-style programming in javascript",
+  "homepage": "https://github.com/justinvdm/sig",
+  "authors": ["justinvdm <justinvdm.0.1.0@gmail.com>"],
+  "license": "MIT",
+  "keywords": [
+    "reactive",
+    "signal",
+    "dataflow",
+    "frp"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

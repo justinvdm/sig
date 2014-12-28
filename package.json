@@ -1,7 +1,7 @@
 {
   "name": "sig-js",
   "version": "0.0.0",
-  "description": "",
+  "description": "high-level reactive-style programming in javascript",
   "main": "sig.js",
   "scripts": {
     "test": "mocha -R spec sig.test.js"
@@ -11,5 +11,11 @@
   "devDependencies": {
     "mocha": "^1.21.4",
     "drainpipe": "^0.1.0"
-  }
+  },
+  "keywords": [
+    "reactive",
+    "signal",
+    "dataflow",
+    "frp"
+  ]
 }
