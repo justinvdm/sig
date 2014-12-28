@@ -29,8 +29,6 @@
   sig.isSig = isSig
   sig.nil = nil
   sig.val = val
-  sig.depend = depend
-  sig.undepend = undepend
   sig.redir = redir
   sig.log = log
 
@@ -41,7 +39,6 @@
     var s = resetProps({
       targets: [],
       source: null,
-      dependents: [],
       type: 'sig',
       eager: true,
       sticky: false,
@@ -76,7 +73,6 @@
 
   function reset(s) {
     runCleanups(s)
-    resetDependents(s)
     resetSource(s)
     resetTargets(s)
     resetProps(s)
@@ -101,13 +97,6 @@
     t.targets.forEach(resetTarget)
     reset(t)
     return t
-  }
-
-
-  function resetDependents(s) {
-    s.dependents.forEach(reset)
-    s.dependents = []
-    return s
   }
 
 
@@ -175,19 +164,6 @@
 
   function unsource(t) {
     resetSource(t)
-    return t
-  }
-
-
-  function depend(t, s) {
-    undepend(t, s)
-    s.dependents.push(t)
-    return t
-  }
-
-
-  function undepend(t, s) {
-    rm(s.dependents, t)
     return t
   }
 
@@ -368,7 +344,7 @@
     var u
     u = then(s, to, t)
     u = except(u, raises, t)
-    depend(u, t)
+    cleanup(t, function() { reset(u) })
     return u
   }
 
