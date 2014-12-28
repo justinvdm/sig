@@ -1,10 +1,10 @@
 # sig
 
-high level reactive-style programming in javascript
+high-level reactive-style programming in javascript
 
 ```javascript
 var vv = require('drainpipe'),
-    sig = require('sig'),
+    sig = require('sig-js'),
     map = sig.map,
     put = sig.put,
     log = sig.log
@@ -21,6 +21,7 @@ vv(s)
   (put, 2)
   (put, 3)  // 5
 ```
+
 
 # docs
 
@@ -46,6 +47,7 @@ $ bower install sig
 ```html
 <script src="/bower_components/sig-js/sig.js"></script>
 ```
+
 
 ## overview
 
@@ -132,7 +134,7 @@ then(s, log)
 // 23
 ```
 
-A signal can be set to non-eager by settings the signal's `eager` property to `false`.
+A signal can be set to non-eager by setting the signal's `eager` property to `false`.
 
 ```javascript
 var s = sig()
@@ -141,11 +143,11 @@ s.eager = false
 
 ### disposal
 
-When a signal is no longer needed, `reset` should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting the signal's transitive sources and targets is necessary for memory collection, and is slightly more involved.
+When a signal is no longer needed, `reset` should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting a signal also has an effect on its transitive sources and targets, and is slightly more involved. This is detailed in the sections top-down resets and bottom-up resets below.
 
 Note that creating signals without reseting them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
-#### top-down resets
+### top-down resets
 
 When a signal is reset, any chain of signals originating from it will no longer receive values, so every signal in the chain can be reset.
 
@@ -186,7 +188,7 @@ then(b, e)
 // c     d     e
 ```
 
-#### bottom-up resets
+### bottom-up resets
 
 When a signal is reset, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, unlike top-down resets, other signals in the chain cannot be reset, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets. Targets keep a reference to their source, so a signal chain will be restored if a new target gets added at the end of the chain.
 
@@ -236,11 +238,71 @@ then(b, e)
 // c     d     e
 ```
 
-### dependencies
-
 ### redirection
 
+Sometimes, a function will return a single signal, though it has created one or more signal chains to send values to the returned signal. For these cases, `redir` should be used to allow values and errors to be redirected to the returned signal, and to set these chains to get reset when the returned signal is reset. If a function creates a signal chain, but the chain isn't returned or redirected, this will lead to memory leaks. Rule of thumb: either return a signal chain or redirect it to another returned signal.
+
+```javascript
+function join(a, b) {
+  var out = sig()
+  var redirA = redir(a, out)
+  var redirB = redir(b, out)
+  return out
+}
+
+
+var a = sig()
+var b = sig()
+var out = join(a, b)
+var logOut = then(out, log)
+
+// single line for targets, double line for redirections
+//
+//   a                  b
+//   |                  |
+//   v                  v
+// redirA ==> out <== redirB
+//             |
+//             v
+//          logOut
+
+put(a, 21)  // 21
+put(b, 23)  // 23
+
+reset(out)
+
+// since redirA and redirB are targets of a and b respectively,
+// them getting reset has the same effect on a and b that ordinary
+// bottom-up resets would have
+//
+//   a                  b
+//                      
+//                      
+// redirA     out     redirB
+//              
+//              
+//          logOut
+```
+
 ### sticky signals
+
+Sometimes, a signal needs to hold onto the last value that was `put` through it. When new targets arrive, they need to receive this last value instead of having them simply 'miss the bus' and only receive new values put through the source signal. Sticky signals allow this.
+
+The common way to create a sticky signal is using `val`.
+
+```javascript
+var v = val(23)
+then(v, log)  // 23
+then(v, log)  // 23
+```
+
+A signal can also be set to sticky manually by setting the signal's `sticky` property to `true`.
+
+```javascript
+var s = sig()
+s.eager = false
+```
+
 
 ## api
 
@@ -544,12 +606,21 @@ put(s, 23)
 Redirects values and errors put through signal `s` to signal `t`. The returned signal is a new signal that controls this redirection. When either it, `s` or `t` is reset, the redirection ends. `redir` behaves differently to `then`, as it does not set `s` as the source of `t`.
 
 ```javascript
-var s = sig()
-var t = sig()
-redir(s, t)
+function join(a, b) {
+  var out = sig()
+  redir(a, out)
+  redir(b, out)
+  return out
+}
 
-then(t, log)
-put(s, 23)  // 23
+
+var a = sig()
+var b = sig()
+var s = join(a, b)
+then(s, log)
+
+put(a, 21)  // 21
+put(b, 23)  // 23
 ```
 
 ### `source(t, s)`
@@ -579,37 +650,6 @@ put(s, 21)  // 21
 
 unsource(t)
 put(s, 23)
-```
-
-### `depend(t, s)`
-
-Sets signal `t` to depend on signal `s` and returns `t`.
-
-```javascript
-var s = sig()
-var t = sig()
-depend(t, s)
-
-then(t, log)
-put(t, 21)  // 21
-reset(s)
-put(t, 23)
-```
-
-### `undepend(t)`
-
-Removes signal `t` as a dependency of signal `s` and returns `t`.
-
-```javascript
-var s = sig()
-var t = sig()
-depend(t, s)
-undepend(t, s)
-
-then(t, log)
-put(t, 21)  // 21
-reset(s)
-put(t, 23)  // 23
 ```
 
 ### `receive(s, v)`
