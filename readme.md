@@ -25,9 +25,9 @@ vv(s)
 
 # docs
 
-  - install
-  - overview
-  - api
+  - [install](#install)
+  - [overview](#overview)
+  - [api](#api)
 
 
 ## install
@@ -57,7 +57,7 @@ Signals can have at most one source and multiple targets, where values and error
 
 ### value propogation
 
-Values are sent from a source signal to its target signals using `put`. `put` sends the given value to the receiver function of each of its targets. `then` is used to create a new target signal with a given receiver function. To further propogate the value, the receiver functions should use `put` to send the value from the relevant signal  (provided as the `this` context) to its target signals.
+Values are sent from a source signal to its target signals using [`put`](#puts-v). `put` sends the given value to the receiver function of each of its targets. [`then`](#thens-fn) is used to create a new target signal with a given receiver function. To further propogate the value, the receiver functions should use `put` to send the value from the relevant signal  (provided as the `this` context) to its target signals.
 
 ```javascript
 var s = sig()
@@ -80,7 +80,7 @@ put(s, 3)
 
 ### error handling
 
-Errors are raised for a signal using `raise`. If a signal's error handler re-raises the error using `raise` itself, the error is propogated to each of the signal's target signals. If a signal's error handler re-raises an error and the signal has no targets, the error is thrown. `except` is used to create a new target signal with a given error handling function.
+Errors are raised for a signal using [`raise`](#raises-e). If a signal's error handler re-raises the error using `raise` itself, the error is propogated to each of the signal's target signals. If a signal's error handler re-raises an error and the signal has no targets, the error is thrown. [`except`](#exepts-e) is used to create a new target signal with a given error handling function.
 
 ```javascript
 var s = sig()
@@ -105,7 +105,7 @@ Note that error handlers should always be used as a way to catch and process err
 
 ### pausing and resuming
 
-When a signal is paused using `pause`, any values given to it by `put` are buffered. When the signal is resumed using `resume`, any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
+When a signal is paused using [`pause`](#pauses), any values given to it by [`put`](#puts-v) are buffered. When the signal is resumed using [`resume`](#resume-s), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
 
 ```javascript
 var s = sig()
@@ -143,7 +143,7 @@ s.eager = false
 
 ### disposal
 
-When a signal is no longer needed, `reset` should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting a signal also has an effect on its transitive sources and targets, and is slightly more involved. This is detailed in the sections top-down resets and bottom-up resets below.
+When a signal is no longer needed, [`reset`](#resets) should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting a signal also has an effect on its transitive sources and targets, and is slightly more involved. This is detailed in the sections [top-down resets](#top-down-resets) and [bottom-up resets](bottom-up-resets) below.
 
 Note that creating signals without reseting them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
@@ -286,9 +286,9 @@ reset(out)
 
 ### sticky signals
 
-Sometimes, a signal needs to hold onto the last value that was `put` through it. When new targets arrive, they need to receive this last value instead of having them simply 'miss the bus' and only receive new values put through the source signal. Sticky signals allow this.
+Sometimes, a signal needs to hold onto the last value that was [`put`](#puts-v) through it. When new targets arrive, they need to receive this last value instead of having them simply 'miss the bus' and only receive new values put through the source signal. Sticky signals allow this.
 
-The common way to create a sticky signal is using `val`.
+The common way to create a sticky signal is using [`val`](#valv).
 
 ```javascript
 var v = val(23)
@@ -490,7 +490,7 @@ put(s, 3)  // [3, 23, 1]
 
 ### `all(obj)`
 
-Identical to `all(values)`, except it handles an object of key-value pairs instead of an array, where each value can be either a signal or non-signal.
+Identical to [`all(values)`](#allvalues), except it handles an object of key-value pairs instead of an array, where each value can be either a signal or non-signal.
 
 ```javascript
 var s = sig()
@@ -552,7 +552,7 @@ put(s, 3)  // 3 0
 
 ### `any(obj)`
 
-Identical to `any(values)`, except it handles an object of key-value pairs instead of an array, where each value can be either a signal or non-signal. The values outputted from the signal are arrays, each containing the given value and its corresponding signal's key in the object.
+Identical to [`any(values)`](#anyvalues), except it handles an object of key-value pairs instead of an array, where each value can be either a signal or non-signal. The values outputted from the signal are arrays, each containing the given value and its corresponding signal's key in the object.
 
 ```javascript
 var s = sig()
@@ -712,7 +712,7 @@ log(b)  // null
 
 ### `spread(args, fn)`
 
-Identical to `.apply`, except it accepts the array of arguments as its first argument, the function as its last argument, and the `this` context `spread` is called with as the function call's `this` context. Useful for cases where the values put through a source signal are arrays of values and the target signal expects the values as separate arguments.
+Identical to [`Function.prototype.apply`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/apply), except it accepts the array of arguments as its first argument, the function as its last argument, and the `this` context `spread` is called with as the function call's `this` context. Useful for cases where the values put through a source signal are arrays of values and the target signal expects the values as separate arguments.
 
 ```javascript
 var s = sig()
@@ -722,7 +722,7 @@ put(s, [1, 2, 3])  // 1 2 3
 
 ### `to(v, s)`
 
-Identical to `put`, except it takes the value as the first argument and the signal as the second argument. Helpful for situations where the value is calculated as the result of a chain of function calls.
+Identical to [`put`](#puts-v), except it takes the value as the first argument and the signal as the second argument. Helpful for situations where the value is calculated as the result of a chain of function calls.
 
 ```javascript
 var s = sig()
