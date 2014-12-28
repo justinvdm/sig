@@ -343,7 +343,7 @@
   function redir(s, t) {
     var u
     u = then(s, to, t)
-    u = except(u, raises, t)
+    u = except(u, raiseTo, t)
     cleanup(t, function() { reset(u) })
     return u
   }
@@ -354,7 +354,7 @@
   }
 
 
-  function raises(e, s) {
+  function raiseTo(e, s) {
     raise(s, e)
   }
 
