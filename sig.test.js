@@ -21,6 +21,7 @@ var sig = require('./sig'),
     any = sig.any,
     all = sig.all,
     update = sig.update,
+    append = sig.append,
     spread = sig.spread,
     isSig = sig.isSig,
     val = sig.val,
@@ -1006,6 +1007,109 @@ describe("sig", function() {
 
       vv(s)
         (update, function(x) { if (x % 2) return val(x) })
+        (then, function(v) { results.push(v) })
+
+      vv(s)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+        (put, 4)
+        (put, 5)
+
+      assert.deepEqual(results, [1, 3, 5])
+    })
+  })
+
+
+  describe(".append", function() {
+    it("should append each returned signal", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (append, function(u) {
+          return map(u, function(x) { return x * 2 })
+        })
+        (then, function(v) {
+          results.push(v)
+        })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      var u = sig()
+      put(s, u)
+
+      vv(u)
+        (put, 4)
+        (put, 5)
+        (put, 6)
+
+      vv(t)
+        (put, 7)
+        (put, 8)
+        (put, 9)
+
+      assert.deepEqual(results, [2, 4, 6, 8, 10, 12, 14, 16, 18])
+    })
+
+    it("should support additional args", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (append, map, function(x) { return x * 2 })
+        (then, function(v) { results.push(v) })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      var u = sig()
+      put(s, u)
+
+      vv(u)
+        (put, 4)
+        (put, 5)
+        (put, 6)
+
+      assert.deepEqual(results, [2, 4, 6, 8, 10, 12])
+    })
+
+    it("should default to an identity function", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (append)
+        (then, function(v) { results.push(v) })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should do nothing if a non-signal is returned", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (append, function(x) { if (x % 2) return val(x) })
         (then, function(v) { results.push(v) })
 
       vv(s)

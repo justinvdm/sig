@@ -32,6 +32,7 @@
   sig.redir = redir
   sig.log = log
   sig.update = update
+  sig.append = append
 
 
   function sig(obj) {
@@ -414,6 +415,22 @@
       if (curr) reset(curr)
       var u = fn(x)
       if (isSig(u)) curr = redir(u, out)
+    })
+
+    redir(t, out)
+    return out
+  }
+
+
+  // NOTE: this function is not part of the api yet and might disappear
+  // or get renamed
+  function append(s, fn) {
+    var out = sig()
+    fn = prime(slice(arguments, 2), fn || identity)
+
+    var t = then(s, function(x) {
+      var u = fn(x)
+      if (isSig(u)) redir(u, out)
     })
 
     redir(t, out)
