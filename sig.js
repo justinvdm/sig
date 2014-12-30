@@ -31,6 +31,7 @@
   sig.val = val
   sig.redir = redir
   sig.log = log
+  sig.update = update
 
 
   function sig(obj) {
@@ -402,6 +403,24 @@
   }
 
 
+  // NOTE: this function is not part of the api yet and might disappear
+  // or get renamed
+  function update(s, fn) {
+    var curr
+    var out = sig()
+    fn = prime(slice(arguments, 2), fn || identity)
+
+    var t = then(s, function(x) {
+      if (curr) reset(curr)
+      var u = fn(x)
+      if (isSig(u)) curr = redir(u, out)
+    })
+
+    redir(t, out)
+    return out
+  }
+
+
   function isSig(s) {
     return (s || 0).type == 'sig'
   }
@@ -463,6 +482,11 @@
     return typeof obj == 'object'
         && typeof obj.length == 'number'
         && 'callee' in obj
+  }
+
+
+  function identity(x) {
+    return x
   }
 
 

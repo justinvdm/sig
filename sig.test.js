@@ -20,6 +20,7 @@ var sig = require('./sig'),
     ensure = sig.ensure,
     any = sig.any,
     all = sig.all,
+    update = sig.update,
     spread = sig.spread,
     isSig = sig.isSig,
     val = sig.val,
@@ -920,6 +921,101 @@ describe("sig", function() {
       raise(b, new Error('-_-'))
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    })
+  })
+
+
+  describe(".update", function() {
+    it("should update the signal to use the last returned signal", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (update, function(u) {
+          return map(u, function(x) { return x * 2 })
+        })
+        (then, function(v) {
+          results.push(v)
+        })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      var u = sig()
+      put(s, u)
+
+      vv(u)
+        (put, 4)
+        (put, 5)
+        (put, 6)
+
+      vv(t)
+        (put, 7)
+        (put, 8)
+        (put, 9)
+
+      assert.deepEqual(results, [2, 4, 6, 8, 10, 12])
+    })
+
+    it("should support additional args", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (update, map, function(x) { return x * 2 })
+        (then, function(v) { results.push(v) })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      assert.deepEqual(results, [2, 4, 6])
+    })
+
+    it("should default to an identity function", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (update)
+        (then, function(v) { results.push(v) })
+
+      var t = sig()
+      put(s, t)
+
+      vv(t)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should do nothing if a non-signal is returned", function() {
+      var s = sig()
+      var results = []
+
+      vv(s)
+        (update, function(x) { if (x % 2) return val(x) })
+        (then, function(v) { results.push(v) })
+
+      vv(s)
+        (put, 1)
+        (put, 2)
+        (put, 3)
+        (put, 4)
+        (put, 5)
+
+      assert.deepEqual(results, [1, 3, 5])
     })
   })
 
