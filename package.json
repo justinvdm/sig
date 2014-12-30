@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha -R spec sig.test.js"
   },
-  "author": "",
+  "author": "justinvdm",
   "license": "MIT",
   "devDependencies": {
     "mocha": "^1.21.4",
