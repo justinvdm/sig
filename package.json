@@ -12,6 +12,10 @@
     "mocha": "^1.21.4",
     "drainpipe": "^0.1.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/justinvdm/sig.git"
+  },
   "keywords": [
     "reactive",
     "signal",
