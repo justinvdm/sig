@@ -592,6 +592,14 @@ describe("sig", function() {
         (capture)
         (assert.deepEqual, [1, 3])
     })
+
+    it("should default to an identity function", function() {
+      vv([1, 0, 3, null])
+        (sig)
+        (filter)
+        (capture)
+        (assert.deepEqual, [1, 3])
+    })
   })
 
 

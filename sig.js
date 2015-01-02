@@ -315,6 +315,8 @@
 
 
   function filter(s, fn) {
+    fn = fn || identity
+
     return then(s, prime(slice(arguments, 2), function(x) {
       if (fn.apply(this, arguments)) put(this, x)
     }))

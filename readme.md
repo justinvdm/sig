@@ -431,7 +431,7 @@ then(t, log)
 put(s, 20)  // 23
 ```
 
-### `filter(s, fn)`
+### `filter(s[, fn])`
 
 Creates and returns a new signal with a receiver function that calls `fn` to determine whether to put each value recieved by the signal through the signal. The created signal uses `s` as its source signal. `fn` is called with each received value as its first argument and the created signal as its `this` context.
 
@@ -454,6 +454,8 @@ then(t, log)
 put(s, 22)  // 22
 put(s, 23)
 ```
+
+If `fn` isn't provided, an identity function is used, filtering values based on their truthyness.
 
 ### `val([v])`
 
