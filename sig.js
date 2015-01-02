@@ -19,6 +19,7 @@
   sig.except = except
   sig.map = map
   sig.filter = filter
+  sig.flatten = flatten
   sig.limit = limit
   sig.once = once
   sig.then = then
@@ -320,6 +321,22 @@
     return then(s, prime(slice(arguments, 2), function(x) {
       if (fn.apply(this, arguments)) put(this, x)
     }))
+  }
+
+
+  function flatten(s) {
+    return then(s, function(x) {
+      deepEach(x, to, this)
+    })
+  }
+
+
+  function deepEach(arr, fn) {
+    fn = prime(slice(arguments, 2), fn)
+    if (!isArray(arr)) return fn(arr)
+    var i = -1
+    var n = arr.length
+    while (++i < n) deepEach(arr[i], fn)
   }
 
 

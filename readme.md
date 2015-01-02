@@ -457,6 +457,16 @@ put(s, 23)
 
 If `fn` isn't provided, an identity function is used, filtering values based on their truthyness.
 
+### `.flatten(s)`
+
+Creates and returns a new signal that puts through each non-array value in a series of possibly nested arrays.
+
+```javascript
+var s = sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
+var t = flatten(s)
+then(t, log)  // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+```
+
 ### `val([v])`
 
 Creates and returns a new sticky signal. If `v` is given, it is used as the initial value for the created signal.

@@ -14,6 +14,7 @@ var sig = require('./sig'),
     except = sig.except,
     map = sig.map,
     filter = sig.filter,
+    flatten = sig.flatten,
     limit = sig.limit,
     once = sig.once,
     then = sig.then,
@@ -599,6 +600,17 @@ describe("sig", function() {
         (filter)
         (capture)
         (assert.deepEqual, [1, 3])
+    })
+  })
+
+
+  describe(".flatten", function() {
+    it("should flatten the given signal", function() {
+      vv([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
+        (sig)
+        (flatten)
+        (capture)
+        (assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     })
   })
 
