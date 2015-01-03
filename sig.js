@@ -438,8 +438,12 @@
 
     var t = then(s, function(x) {
       if (curr) reset(curr)
+
       var u = fn(x)
-      if (isSig(u)) curr = redir(u, out)
+      if (!isSig(u)) return
+
+      curr = u
+      redir(u, out)
     })
 
     redir(t, out)
