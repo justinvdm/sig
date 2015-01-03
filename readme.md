@@ -486,6 +486,19 @@ var s = ensure(23)
 then(v, log)  // 23
 ```
 
+### `ensureVal(v)`
+
+If a `v` is given, a sticky signal is returned with `v` as its initial value. If `v` is a signal, a new sticky signal is returned with `v` as its source.
+
+```javascript
+var v = ensureVal(23)
+then(v, log)  // 23
+
+var w = ensureVal(sig([23]))
+then(w, log)  // 23
+then(w, log)  // 23
+```
+
 ### `all(values)`
 
 Accepts an array of `values`, where each value can be either a signal or non-signal, and returns a signal that outputs an array of the current values of each signal and non-signal each time one of the values changes. Note that the returned signal will only start outputting once each signal in the array has put through its first value.

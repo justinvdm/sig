@@ -26,6 +26,7 @@ var sig = require('./sig'),
     spread = sig.spread,
     isSig = sig.isSig,
     val = sig.val,
+    ensureVal = sig.ensureVal,
     redir = sig.redir,
     to = sig.to,
     resolve = sig.resolve
@@ -1221,6 +1222,28 @@ describe("sig", function() {
       s.eager = false
       resume(s)
       assert.deepEqual(capture(s), [2])
+    })
+  })
+
+
+  describe(".ensureVal", function() {
+    it("should turn values into sticky signals", function() {
+      vv(23)
+        (ensureVal)
+        (capture)
+        (assert.deepEqual, [23])
+    })
+
+    it("should turn signals into sticky signals", function() {
+      var s = ensureVal(sig([23]))
+
+      vv(s)
+        (capture)
+        (assert.deepEqual, [23])
+
+      vv(s)
+        (capture)
+        (assert.deepEqual, [23])
     })
   })
 

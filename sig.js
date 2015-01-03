@@ -31,6 +31,7 @@
   sig.isSig = isSig
   sig.nil = nil
   sig.val = val
+  sig.ensureVal = ensureVal
   sig.redir = redir
   sig.log = log
   sig.update = update
@@ -306,6 +307,13 @@
     s.sticky = true
     if (arguments.length) put(s, x)
     return s
+  }
+
+
+  function ensureVal(v) {
+    return isSig(v)
+      ? then(v, val())
+      : val(v)
   }
 
 
