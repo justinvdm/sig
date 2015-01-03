@@ -8,6 +8,7 @@
   sig.reset = reset
   sig.put = put
   sig.to = to
+  sig.resolve = resolve
   sig.putMany = putMany
   sig.receive = receive
   sig.source = source
@@ -367,6 +368,11 @@
     u = except(u, raiseTo, t)
     cleanup(t, function() { reset(u) })
     return u
+  }
+
+
+  function resolve(s) {
+    return put(s, null)
   }
 
 

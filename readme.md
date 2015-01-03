@@ -749,6 +749,17 @@ vv(23)
   (to, s)  // 47
 ```
 
+### `resolve(s)`
+
+Special case of [`put`](#puts-v) where `v` is `null`.
+
+```javascript
+var s = sig()
+then(s, log)
+
+resolve(s)  // null
+```
+
 ### `putMany(s, values)`
 
 Puts each value in a `values` array through the signal `s`.

@@ -27,7 +27,8 @@ var sig = require('./sig'),
     isSig = sig.isSig,
     val = sig.val,
     redir = sig.redir,
-    to = sig.to
+    to = sig.to,
+    resolve = sig.resolve
 
 
 function capture(s) {
@@ -543,7 +544,7 @@ describe("sig", function() {
     })
   })
 
-
+  
   describe(".map", function() {
     it("should map the given signal", function() {
       vv([1, 2, 3, 4])
@@ -1256,6 +1257,7 @@ describe("sig", function() {
     })
   })
 
+
   describe(".to", function() {
     it("should put the given value onto the given signal", function() {
       var s = sig()
@@ -1264,6 +1266,19 @@ describe("sig", function() {
       to(3, s)
 
       assert.deepEqual(capture(s), [1, 2, 3])
+    })
+  })
+
+
+  describe(".resolve", function() {
+    it("should put nulls", function() {
+      var s = sig()
+      resolve(s)
+      resolve(s)
+
+      vv(s)
+        (capture)
+        (assert.deepEqual, [null, null])
     })
   })
 })
