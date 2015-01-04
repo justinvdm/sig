@@ -730,6 +730,7 @@ function tick() {
   var s = sig()
   var id
 
+  // this setup function gets called immediately
   setup(s, function() {
     id = setInterval(resolve, 200, s)
   })
@@ -737,16 +738,20 @@ function tick() {
   teardown(s, function() {
     clearInterval(id)
   })
+
+  return s
 }
 
 var s = tick()
+
 var t = then(s, log)
 
-// this would call the teardown function because of a bottom-up disconnect
+// the teardown function would get called here
 reset(t)
 
-// this would call the teardown function because `s` gets reset explicitly
-reset(s)
+// a reconnect occurs at this point since `s` has regained a target, so the setup
+// function would get called here
+then(s, log)
 ```
 
 ### `teardown(s, fn)`
@@ -762,9 +767,10 @@ function tick() {
     id = setInterval(resolve, 200, s)
   })
 
-  teardown(s, function() {
-    clearInterval(id)
+  teardown(s, function() { clearInterval(id)
   })
+
+  return s
 }
 
 var s = tick()
