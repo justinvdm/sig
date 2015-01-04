@@ -457,7 +457,7 @@ put(s, 23)
 
 If `fn` isn't provided, an identity function is used, filtering values based on their truthyness.
 
-### `.flatten(s)`
+### `flatten(s)`
 
 Creates and returns a new signal that puts through each non-array value in a series of possibly nested arrays.
 
