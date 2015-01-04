@@ -466,8 +466,6 @@
   }
 
 
-  // NOTE: this function is not part of the api yet and might disappear
-  // or get renamed
   function update(s, fn) {
     var curr
     var out = sig()
@@ -486,8 +484,7 @@
     return out
   }
 
-  // NOTE: this function is not part of the api yet and might disappear
-  // or get renamed
+
   function append(s, fn) {
     var out = sig()
     fn = prime(slice(arguments, 2), fn || identity)
