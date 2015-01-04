@@ -6,6 +6,8 @@
   var _log = console.log
 
   sig.reset = reset
+  sig.disconnect = disconnect
+  sig.reconnect = reconnect
   sig.put = put
   sig.to = to
   sig.resolve = resolve
@@ -15,9 +17,10 @@
   sig.unsource = unsource
   sig.pause = pause
   sig.resume = resume
-  sig.cleanup = cleanup
   sig.raise = raise
   sig.except = except
+  sig.setup = setup
+  sig.teardown = teardown
   sig.map = map
   sig.filter = filter
   sig.flatten = flatten
@@ -70,14 +73,15 @@
     s.paused = true
     s.current = nil
     s.buffer = []
-    s.cleanups = []
     s.error = null
+    s.disconnected = false
+    s.eventListeners = {}
     return s
   }
 
 
   function reset(s) {
-    runCleanups(s)
+    emit(s, 'reset')
     resetSource(s)
     resetTargets(s)
     resetProps(s)
@@ -86,7 +90,7 @@
 
 
   function resetSource(t) {
-    disconnectSources(t)
+    disconnect(t)
     unsetSource(t)
     return t
   }
@@ -105,27 +109,31 @@
   }
 
 
-  function disconnectSources(t) {
+  function disconnect(t) {
     var s = t.source
 
     if (s) {
       rmTarget(s, t)
-      if (!s.targets.length) disconnectSources(s)
+      if (!s.targets.length) disconnect(s)
     }
 
+    t.disconnected = true
+    emit(t, 'disconnect')
     return t
   }
 
 
-  function reconnectSources(t) {
+  function reconnect(t) {
     var s = t.source
 
     if (s) {
       rmTarget(s, t)
       addTarget(s, t)
-      reconnectSources(s)
+      reconnect(s)
     }
 
+    t.disconnected = false
+    emit(t, 'reconnect')
     return t
   }
 
@@ -160,7 +168,8 @@
     var firstTarget = !s.targets.length
     setSource(t, s)
     addTarget(s, t)
-    reconnectSources(s)
+
+    if (s.disconnected) reconnect(s)
     if (s.eager && firstTarget) resume(s)
     else if (s.sticky && s.current !== nil) receive(t, s.current)
     return t
@@ -204,21 +213,6 @@
   function resume(s) {
     s.paused = false
     flush(s)
-    return s
-  }
-
-
-  function cleanup(s, fn) {
-    s.cleanups.push(fn)
-    return s
-  }
-
-
-  function runCleanups(s) {
-    var cleanups = s.cleanups
-    var n = cleanups.length
-    var i = -1
-    while (++i < n) cleanups[i].call(s)
     return s
   }
 
@@ -302,6 +296,38 @@
   }
 
 
+  function on(s, event, fn) {
+    var listeners = s.eventListeners[event] || []
+    s.eventListeners[event] = listeners
+    listeners.push(fn)
+    return s
+  }
+
+
+  function emit(s, event) {
+    var args = slice(arguments, 2)
+    var listeners = s.eventListeners[event] || []
+    var n = listeners.length
+    var i = -1
+    while (++ i < n) listeners[i].apply(s, args)
+    return s
+  }
+
+
+  function setup(s, fn) {
+    on(s, 'reconnect', fn)
+    fn.call(s)
+    return s
+  }
+
+
+  function teardown(s, fn) {
+    on(s, 'disconnect', fn)
+    on(s, 'reset', fn)
+    return s
+  }
+
+
   function val(x) {
     var s = sig()
     s.sticky = true
@@ -374,7 +400,7 @@
     var u
     u = then(s, to, t)
     u = except(u, raiseTo, t)
-    cleanup(t, function() { reset(u) })
+    on(t, 'disconnect', function() { reset(u) })
     return u
   }
 

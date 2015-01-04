@@ -9,9 +9,10 @@ var sig = require('./sig'),
     unsource = sig.unsource,
     pause = sig.pause,
     resume = sig.resume,
-    cleanup = sig.cleanup,
     raise = sig.raise,
     except = sig.except,
+    setup = sig.setup
+    teardown = sig.teardown,
     map = sig.map,
     filter = sig.filter,
     flatten = sig.flatten,
@@ -145,6 +146,8 @@ describe("sig", function() {
     // |     |
     // v     v
     // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
     assert.deepEqual(a.targets, [b])
     assert.deepEqual(b.source, a)
     assert.deepEqual(b.targets, [c, d])
@@ -160,6 +163,8 @@ describe("sig", function() {
     //       |
     //       v
     // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
     assert.deepEqual(a.targets, [b])
     assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [d])
@@ -175,6 +180,8 @@ describe("sig", function() {
     //        
     //        
     // c     d     e
+    assert(a.disconnected)
+    assert(b.disconnected)
     assert(!a.targets.length)
     assert.deepEqual(b.source, a)
     assert(!b.targets.length)
@@ -190,6 +197,8 @@ describe("sig", function() {
     //             |
     //             v
     // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
     assert.deepEqual(a.targets, [b])
     assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [e])
@@ -465,26 +474,6 @@ describe("sig", function() {
       (assert.deepEqual, [1, 2, 3, 4])
   })
 
-  it("should support cleanup hooks", function() {
-    var results = []
-
-    var s = vv(sig())
-      (cleanup, function() {
-        results.push(1)
-      })
-      (cleanup, function() {
-        results.push(2)
-      })
-      (cleanup, function() {
-        results.push(3)
-      })
-      ()
-
-    assert(!results.length)
-    reset(s)
-    assert.deepEqual(results, [1, 2, 3])
-  })
-
   describe(".then", function() {
     it("should support connecting to an existing target", function() {
       var s = sig()
@@ -542,6 +531,71 @@ describe("sig", function() {
       }, 1, 2)
 
       raise(s, new Error(':/'))
+    })
+  })
+
+
+  describe(".setup", function() {
+    it("should call the function immediately", function(done) {
+      var s = sig()
+
+      setup(s, function() {
+        assert.strictEqual(this, s)
+        done()
+      })
+    })
+
+    it("should call the function when a signal is reconnected", function() {
+      var s = sig()
+      var run
+
+      setup(s, function() {
+        run = true
+        assert.strictEqual(this, s)
+      })
+
+      run = false
+      var t = then(s, sig())
+      assert(!run)
+
+      reset(t)
+      assert(!run)
+
+      then(s, sig())
+      assert(run)
+    })
+  })
+
+
+  describe(".teardown", function() {
+    it("should call the function when a signal is reset", function() {
+      var s = sig()
+      var run = false
+
+      teardown(s, function() {
+        run = true
+        assert.strictEqual(this, s)
+      })
+
+      assert(!run)
+      reset(s)
+      assert(run)
+    })
+
+    it("should call the function when a signal is disconnected", function() {
+      var s = sig()
+      var run = false
+
+      teardown(s, function() {
+        run = true
+        assert.strictEqual(this, s)
+      })
+
+      var t = then(s, sig())
+      assert(!run)
+
+      reset(t)
+      assert(run)
     })
   })
 

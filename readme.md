@@ -146,7 +146,7 @@ s.eager = false
 
 ### disposal
 
-When a signal is no longer needed, [`reset`](#resets) should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting a signal also has an effect on its transitive sources and targets, and is slightly more involved. This is detailed in the sections [top-down resets](#top-down-resets) and [bottom-up resets](bottom-up-resets) below.
+When a signal is no longer needed, [`reset`](#resets) should be used. Resetting a signal resets its non-static properties, including its source and targets. Resetting a signal also has an effect on its transitive sources and targets, and is slightly more involved. This is detailed in the sections [top-down resets](#top-down-resets) and [bottom-up resets](#bottom-up-resets) below.
 
 Note that creating signals without reseting them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
@@ -193,7 +193,7 @@ then(b, e)
 
 ### bottom-up resets
 
-When a signal is reset, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, unlike top-down resets, other signals in the chain cannot be reset, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets. Targets keep a reference to their source, so a signal chain will be restored if a new target gets added at the end of the chain.
+When a signal is reset, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, unlike top-down resets, other signals in the chain cannot be reset, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets, putting the target in a 'disconnected' state. Targets keep a reference to their source, so a signal chain will be reconnected if a new target gets added at the end of the chain.
 
 ```javascript
 var a = sig()
@@ -721,21 +721,60 @@ put(s, 23)
 resume(s)  // 23
 ```
 
-### `cleanup(s, fn)`
+### `setup(s, fn)`
 
-Schedules `fn` to be called when `s` is reset. `fn` is called with `s` as its `this` context.
+Calls `fn`, then schedules it to be called again when `s` is reconnected because of a [bottom-up reset](#bottom-up-resets), followed by a new target. `fn` is called with `s` as its `this` context. Any state used by the signal should be initialised inside a setup function.
 
 ```javascript
-var s = sig()
-var b = 2
-cleanup(s, function() { b = null })
+function tick() {
+  var s = sig()
+  var id
 
-var t = map(s, function(a) { return a + b })
-then(t, log)
-put(s, 20)  // 23
+  setup(s, function() {
+    id = setInterval(resolve, 200, s)
+  })
 
+  teardown(s, function() {
+    clearInterval(id)
+  })
+}
+
+var s = tick()
+var t = then(s, log)
+
+// this would call the teardown function because of a bottom-up disconnect
+reset(t)
+
+// this would call the teardown function because `s` gets reset explicitly
 reset(s)
-log(b)  // null
+```
+
+### `teardown(s, fn)`
+
+Schedules `fn` to be called when `s` is reset and when `s` is disconnected because of a [bottom-up reset](#bottom-up-resets). `fn` is called with `s` as its `this` context. Any state used by the signal should be deconstructed inside a teardown function.
+
+```javascript
+function tick() {
+  var s = sig()
+  var id
+
+  setup(s, function() {
+    id = setInterval(resolve, 200, s)
+  })
+
+  teardown(s, function() {
+    clearInterval(id)
+  })
+}
+
+var s = tick()
+var t = then(s, log)
+
+// this would call the teardown function because of a bottom-up disconnect
+reset(t)
+
+// this would call the teardown function because `s` gets reset explicitly
+reset(s)
 ```
 
 ### `spread(args, fn)`
