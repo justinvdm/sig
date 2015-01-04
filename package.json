@@ -1,6 +1,6 @@
 {
   "name": "sig-js",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.1",
   "description": "high-level reactive-style programming in javascript",
   "main": "sig.js",
   "scripts": {
