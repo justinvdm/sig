@@ -450,8 +450,7 @@
       var u = fn(x)
       if (!isSig(u)) return
 
-      curr = u
-      redir(u, out)
+      curr = redir(u, out)
     })
 
     redir(t, out)

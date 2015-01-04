@@ -985,29 +985,6 @@ describe("sig", function() {
       assert.deepEqual(results, [2, 4, 6, 8, 10, 12])
     })
 
-    it("should reset the current signal when a new one arrives", function() {
-      var s = sig()
-      var results = []
-
-      var i = 0
-      var a = sig()
-      var b = sig()
-      var aResults = capture(a)
-
-      vv(s)
-        (update, function() {
-          return i++ > 0
-            ? b
-            : a
-        })
-
-      resolve(s)
-      resolve(s)
-
-      put(a, 23)
-      assert(!aResults.length)
-    })
-
     it("should support additional args", function() {
       var s = sig()
       var results = []
