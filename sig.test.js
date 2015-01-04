@@ -340,25 +340,6 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3, 4])
   })
 
-  it("should support eager signals", function() {
-    var s1 = sig()
-    var s2 = sig()
-    var t1 = sig()
-    var t2 = sig()
-
-    s1.eager = true
-    s2.eager = false
-
-    assert(s1.paused)
-    assert(s2.paused)
-
-    then(s1, t1)
-    assert(!s1.paused)
-
-    then(s2, t2)
-    assert(s2.paused)
-  })
-
   it("should not allow multiple source signals", function() {
     var t = sig()
 
@@ -473,6 +454,26 @@ describe("sig", function() {
       (capture)
       (assert.deepEqual, [1, 2, 3, 4])
   })
+
+
+  describe("eager signals", function() {
+    it("should resume when the first target is added", function() {
+      var s = sig()
+      s.eager = true
+
+      assert(s.paused)
+
+      var t = then(s, sig())
+      assert(!s.paused)
+
+      reset(t)
+      pause(s)
+
+      then(s, sig())
+      assert(s.paused)
+    })
+  })
+
 
   describe(".then", function() {
     it("should support connecting to an existing target", function() {

@@ -134,6 +134,7 @@
 
     t.disconnected = false
     emit(t, 'reconnect')
+
     return t
   }
 
@@ -165,11 +166,13 @@
 
 
   function source(t, s) {
-    var firstTarget = !s.targets.length
+    var disconnected = s.disconnected
+    var firstTarget = !disconnected && !s.targets.length
+
     setSource(t, s)
     addTarget(s, t)
 
-    if (s.disconnected) reconnect(s)
+    if (disconnected) reconnect(s)
     if (s.eager && firstTarget) resume(s)
     else if (s.sticky && s.current !== nil) receive(t, s.current)
     return t
@@ -482,7 +485,6 @@
     redir(t, out)
     return out
   }
-
 
   // NOTE: this function is not part of the api yet and might disappear
   // or get renamed
