@@ -303,7 +303,7 @@ A signal can also be set to sticky manually by setting the signal's `sticky` pro
 
 ```javascript
 var s = sig()
-s.eager = false
+s.sticky = true
 ```
 
 
