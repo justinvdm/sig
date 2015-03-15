@@ -22,6 +22,7 @@ var sig = require('./sig'),
     ensure = sig.ensure,
     any = sig.any,
     all = sig.all,
+    merge = sig.merge,
     update = sig.update,
     append = sig.append,
     spread = sig.spread,
@@ -999,6 +1000,103 @@ describe("sig", function() {
       raise(b, new Error('-_-'))
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    })
+  })
+
+
+  describe(".merge", function() {
+    it("should support arrays with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv([a, b, 23])
+        (merge)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      put(a, 1)
+      assert.deepEqual(results, [1])
+
+      put(b, 2)
+      assert.deepEqual(results, [1, 2])
+
+      put(a, 3)
+      assert.deepEqual(results, [1, 2, 3])
+
+      put(b, 4)
+      assert.deepEqual(results, [1, 2, 3, 4])
+    })
+    
+    it("should support objects with both signals and non-signals", function() {
+      var a = sig()
+      var b = sig()
+
+      var results = vv({
+          a: a,
+          b: b,
+          c: 23
+        })
+        (merge)
+        (capture)
+        ()
+
+      assert(!results.length)
+
+      put(a, 1)
+      assert.deepEqual(results, [1])
+
+      put(b, 2)
+      assert.deepEqual(results, [1, 2])
+
+      put(a, 3)
+      assert.deepEqual(results, [1, 2, 3])
+
+      put(b, 4)
+      assert.deepEqual(results, [1, 2, 3, 4])
+    })
+
+    it("should reset all its listeners when the out signal is reset", function() {
+      var a = sig()
+      var b = sig()
+      var s = merge([a, b])
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
+
+      reset(s)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
+    })
+
+    it("should handle errors from its source signals", function() {
+      var results = []
+      var a = sig()
+      var b = sig()
+
+      vv([a, b])
+        (merge)
+        (except, function(e) {
+          results.push(e.message)
+        })
+
+      raise(a, new Error(':/'))
+      raise(b, new Error(':|'))
+      raise(a, new Error('o_O'))
+      raise(b, new Error('-_-'))
+      
+      assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
+    })
+
+    it("should support argument objects", function() {
+      function test() {
+        vv(arguments)
+          (merge)
+          (capture)
+          (assert.deepEqual, [1, 2])
+      }
+
+      test(ensure(1), ensure(2))
     })
   })
 

@@ -30,6 +30,7 @@
   sig.ensure = ensure
   sig.any = any
   sig.all = all
+  sig.merge = merge
   sig.spread = spread
   sig.isSig = isSig
   sig.nil = nil
@@ -463,6 +464,11 @@
       values[k] = x
       if (isEmpty(remaining)) put(this, copy(values))
     }
+  }
+
+
+  function merge(values) {
+    return map(any(values), spread, identity)
   }
 
 
