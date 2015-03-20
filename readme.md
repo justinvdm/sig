@@ -6,23 +6,15 @@
 high-level reactive-style programming in javascript
 
 ```javascript
-var vv = require('drainpipe'),
-    sig = require('sig-js'),
-    map = sig.map,
-    put = sig.put,
-    log = sig.log
-
 var s = sig()
 
-vv(s)
-  (map, function(x) { return x + 1 })
-  (filter, function(x) { return x % 2 })
-  (then, log)
+s.map(function(x) { return x + 1 })
+ .filter(function(x) { return x % 2 })
+ .then(sig.log)
 
-vv(s)
-  (put, 1)  // 2
-  (put, 2)
-  (put, 3)  // 5
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 5
 ```
 
 
@@ -65,13 +57,13 @@ Values are sent from a source signal to its target signals using [`put`](#puts-v
 ```javascript
 var s = sig()
 
-var t1 = then(s, function(v) { put(this, v + 1) })
-var u1 = then(t1, log)
+var t1 = s.then(function(v) { this.put(v + 1) })
+var u1 = t1.then(sig.log)
 
-var t2 = then(s, function(v) { put(this, v * 2) })
-var u2 = then(t2, log)
+var t2 = s.then(function(v) { this.put(v * 2) })
+var u2 = t2.then(sig.log)
 
-put(s, 3)
+s.put(3)
 // -- s --       
 // | 3   | 3
 // v     v
@@ -88,13 +80,13 @@ Errors are raised for a signal using [`raise`](#raises-e). If a signal's error h
 ```javascript
 var s = sig()
 
-var t1 = except(s, function(e) { raise(this, e) })
-var u1 = except(t1, log)
+var t1 = s.except(function(e) { this.raise(e) })
+var u1 = t1.except(sig.log)
 
-var t2 = except(s, function(e) { raise(this, e) })
-var u2 = except(t2, log)
+var t2 = s.except(function(e) { this.raise(e) })
+var u2 = t2.except(sig.log)
 
-raise(s, new Error('o_O'))
+s.raise(new Error('o_O'))
 // ---- s ----       
 // | o_O     | o_O
 // v         v
@@ -112,13 +104,13 @@ When a signal is paused using [`pause`](#pauses), any values given to it by [`pu
 
 ```javascript
 var s = sig()
-var t = then(s, log)
+var t = s.then(sig.log)
 
-pause(s)
-put(s, 21)
-put(s, 23)
+s.pause()
+ .put(21)
+ .put(23)
 
-resume(s)
+s.resume()
 // 21
 // 23
 ```
@@ -129,10 +121,10 @@ Eager signals are signals that start off paused, but resume after their first ta
 
 ```javascript
 var s = sig()
-put(s, 21)
-put(s, 23)
+  .put(21)
+  .put(23)
 
-then(s, log)
+s.then(sig.log)
 // 21
 // 23
 ```
@@ -161,9 +153,9 @@ var c = sig()
 var d = sig()
 var e = sig()
 
-then(a, b)
-then(b, c)
-then(b, d)
+a.then(b)
+b.then(c)
+b.then(d)
 //       a
 //       |
 //       v
@@ -172,7 +164,7 @@ then(b, d)
 // v     v
 // c     d     e
 
-reset(a)
+a.reset()
 //       a
 //        
 //        
@@ -181,7 +173,7 @@ reset(a)
 //        
 // c     d     e
 
-then(b, e)
+b.then(e)
 //       a
 //        
 //        
@@ -202,9 +194,9 @@ var c = sig()
 var d = sig()
 var e = sig()
 
-then(a, b)
-then(b, c)
-then(b, d)
+a.then(b)
+b.then(c)
+b.then(d)
 //       a
 //       |
 //       v
@@ -213,7 +205,7 @@ then(b, d)
 // v     v
 // c     d     e
 
-reset(c)
+c.reset()
 //       a
 //       |
 //       v
@@ -222,7 +214,7 @@ reset(c)
 //       v
 // c     d     e
 
-reset(d)
+d.reset()
 //       a
 //        
 //        
@@ -231,7 +223,7 @@ reset(d)
 //        
 // c     d     e
 
-then(b, e)
+b.then(e)
 //       a
 //       |
 //       v
@@ -248,8 +240,8 @@ Sometimes, a function will return a single signal, though it has created one or 
 ```javascript
 function join(a, b) {
   var out = sig()
-  var redirA = redir(a, out)
-  var redirB = redir(b, out)
+  var redirA = a.redir(out)
+  var redirB = b.redir(out)
   return out
 }
 
@@ -257,7 +249,7 @@ function join(a, b) {
 var a = sig()
 var b = sig()
 var out = join(a, b)
-var logOut = then(out, log)
+var logOut = out.then(sig.log)
 
 // single line for targets, double line for redirections
 //
@@ -269,10 +261,10 @@ var logOut = then(out, log)
 //             v
 //          logOut
 
-put(a, 21)  // 21
-put(b, 23)  // 23
+a.put(21)  // 21
+b.put(23)  // 23
 
-reset(out)
+out.reset()
 
 // since redirA and redirB are targets of a and b respectively,
 // them getting reset has the same effect on a and b that ordinary
@@ -295,8 +287,8 @@ The common way to create a sticky signal is using [`val`](#valv).
 
 ```javascript
 var v = val(23)
-then(v, log)  // 23
-then(v, log)  // 23
+v.then(sig.log)  // 23
+v.then(sig.log)  // 23
 ```
 
 A signal can also be set to sticky manually by setting the signal's `sticky` property to `true`.
@@ -317,16 +309,24 @@ Creates a new signal. If a `values` array is given, it is used as the initial va
 var s = sig([1, 2, 3])
 ```
 
+
+### functions and methods
+
+All sig functions are available as static functions off of `sig` itself. The following functions are also accessible as methods:
+
+`reset`, `disconnect`, `reconnect`, `put`, `to`, `resolve`, `putMany`, `receive`, `source`, `unsource`, `pause`, `resume`, `raise`, `except`, `setup`, `teardown`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+
+
 ### `put(s, v)`
 
 Puts the value `v` through the signal `s`, where `v` can be a value of any type.
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-put(s, 21)  // 21
-put(s, 23)  // 23
+s.put(21)  // 21
+ .put(21)  // 23
 ```
 
 ### `raise(s, e)`
@@ -335,9 +335,8 @@ Propogates the error instance `e` through the signal `e`.
 
 ```javascript
 var s = sig()
-except(s, log)
-
-raise(s, new Error('o_O'))  // o_O
+s.except(sig.log)
+s.raise(new Error('o_O'))  // o_O
 ```
 
 ### `reset(s)`
@@ -346,12 +345,12 @@ Resets the given signal.
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-put(s, 21)  // 21
-reset(s)
+s.put(21)  // 21
+s.reset()
 
-put(s, 23)
+s.put(23)
 ```
 
 ### `then(s, fn)`
@@ -360,20 +359,22 @@ Creates and returns a new signal with `fn` as its receiver function and `s` as i
 
 ```javascript
 var s = sig()
-var t = then(s, function(v) { put(this, v + 2) })
-then(t, log)
 
-put(s, 21)  // 23
+s.then(function(v) { this.put(v + 2) })
+ .then(sig.log)
+
+s.put(21)  // 23
 ```
 
 If extra arguments are provided, they are used as extra arguments to each call to `fn`.
 
 ```javascript
 var s = sig()
-var t = then(s, function(a, b, c) { put(this, a + b + c) }, 1, 2)
-then(t, log)
 
-put(s, 20)  // 23
+s.then(function(a, b, c) { this.put(a + b + c) }, 1, 2)
+ .then(sig.log)
+
+s.put(20)  // 23
 ```
 
 ### `then(s, t)`
@@ -385,8 +386,8 @@ var s = sig()
 var t = sig()
 t.receiver = function(v) { return v }
 
-then(s, t)
-put(s, 23)  // 23
+s.then(t)
+s.put(23)  // 23
 ```
 
 ### `except(s, fn)`
@@ -395,18 +396,16 @@ Creates and returns a new signal with `fn` set as its error handling function an
 
 ```javascript
 var s = sig()
-var t = except(s, log)
-
-raise(s, new Error('o_O'))  // o_O
+s.except(sig.log)
+s.raise(new Error('o_O'))  // o_O
 ```
 
 If extra arguments are provided, they are used as extra arguments to each call to `fn`.
 
 ```javascript
 var s = sig()
-var t = except(s, log)
-
-raise(s, new Error('o_O'), '-_-', ':/')  // o_O -_- :/
+s.except(sig.log)
+s.raise(new Error('o_O'), '-_-', ':/')  // o_O -_- :/
 ```
 
 ### `map(s, fn)`
@@ -415,20 +414,22 @@ Creates and returns a new signal with a receiver function that calls `fn` and pu
 
 ```javascript
 var s = sig()
-var t = map(s, function(v) { return v + 2 })
-then(t, log)
 
-put(s, 21)  // 23
+s.map(function(v) { return v + 2 })
+ .then(sig.log)
+
+s.put(21)  // 23
 ```
 
 If extra arguments are provided, they are used as extra arguments to each call to `fn`.
 
 ```javascript
 var s = sig()
-var t = map(s, function(a, b, c) { put(this, a + b + c) }, 1, 2)
-then(t, log)
 
-put(s, 20)  // 23
+s.map(function(a, b, c) { this.put(a + b + c) }, 1, 2)
+ .then(sig.log)
+
+s.put(20)  // 23
 ```
 
 ### `filter(s[, fn])`
@@ -437,22 +438,24 @@ Creates and returns a new signal with a receiver function that calls `fn` to det
 
 ```javascript
 var s = sig()
-var t = filter(s, function(v) { return v % 2 })
-then(t, log)
 
-put(s, 22)
-put(s, 23)  // 23
+s.filter(function(v) { return v % 2 })
+ .then(sig.log)
+
+s.put(22)
+ .put(23)  // 23
 ```
 
 If extra arguments are provided, they are used as extra arguments to each call to `fn`.
 
 ```javascript
 var s = sig()
-var t = filter(s, function(a, b, c) { return (a + b + c) % 2 }, 1, 2)
-then(t, log)
 
-put(s, 22)  // 22
-put(s, 23)
+s.filter(function(a, b, c) { return (a + b + c) % 2 }, 1, 2)
+ .then(sig.log)
+
+s.put(22)  // 22
+ .put(23)
 ```
 
 If `fn` isn't provided, an identity function is used, filtering values based on their truthyness.
@@ -462,9 +465,11 @@ If `fn` isn't provided, an identity function is used, filtering values based on 
 Creates and returns a new signal that puts through each non-array value in a series of possibly nested arrays.
 
 ```javascript
-var s = sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
-var t = flatten(s)
-then(t, log)  // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
+  .flatten()
+  .then(sig.log)
+  
+// [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
 ### `val([v])`
@@ -472,9 +477,9 @@ then(t, log)  // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 Creates and returns a new sticky signal. If `v` is given, it is used as the initial value for the created signal.
 
 ```javascript
-var v = val(23)
-then(v, log)  // 23
-then(v, log)  // 23
+var v = sig.val(23)
+v.then(sig.log)  // 23
+v.then(sig.log)  // 23
 ```
 
 ### `ensure(v)`
@@ -482,8 +487,8 @@ then(v, log)  // 23
 If `v` is a signal, it is simply returned. Otherwise, a new signal is created with `v` as its initial value.
 
 ```javascript
-var s = ensure(23)
-then(v, log)  // 23
+var s = sig.ensure(23)
+s.then(sig.log)  // 23
 ```
 
 ### `ensureVal(v)`
@@ -491,12 +496,12 @@ then(v, log)  // 23
 If a `v` is given, a sticky signal is returned with `v` as its initial value. If `v` is a signal, a new sticky signal is returned with `v` as its source.
 
 ```javascript
-var v = ensureVal(23)
-then(v, log)  // 23
+var v = sig.ensureVal(23)
+v.then(sig.log)  // 23
 
-var w = ensureVal(sig([23]))
-then(w, log)  // 23
-then(w, log)  // 23
+var w = sig.ensureVal(sig([23]))
+w.then(sig.log)  // 23
+w.then(sig.log)  // 23
 ```
 
 ### `all(values)`
@@ -506,14 +511,15 @@ Accepts an array of `values`, where each value can be either a signal or non-sig
 ```javascript
 var s = sig()
 var t = sig()
-var u = all([s, 23, t])
-then(u, log)
 
-put(s, 1)
-put(t, 3)  // [1, 23, 3]
-put(s, 2)  // [2, 23, 3]
-put(t, 1)  // [2, 23, 1]
-put(s, 3)  // [3, 23, 1]
+sig.all([s, 23, t])
+  .then(sig.log)
+
+s.put(1)
+t.put(3)  // [1, 23, 3]
+s.put(2)  // [2, 23, 3]
+t.put(1)  // [2, 23, 1]
+s.put(3)  // [3, 23, 1]
 ```
 
 ### `all(obj)`
@@ -523,37 +529,38 @@ Identical to [`all(values)`](#allvalues), except it handles an object of key-val
 ```javascript
 var s = sig()
 var t = sig()
-var u = all({
-  a: s,
-  b: 23,
-  c: t
-})
-then(u, log)
 
-put(s, 1)
+sig.all({
+    a: s,
+    b: 23,
+    c: t
+  })
+  .then(sig.log)
 
-put(t, 3)
+s.put(1)
+
+t.put(3)
 // {
 //   a: 1,
 //   b: 23,
 //   c: 3
 // }
 
-put(s, 2)
+s.put(2)
 // {
 //   a: 2,
 //   b: 23,
 //   c: 3
 // }
 
-put(t, 1)
+t.put(1)
 // {
 //   a: 2,
 //   b: 23,
 //   c: 1
 // }
 
-put(s, 3)
+s.put(3)
 // {
 //   a: 3,
 //   b: 23,
@@ -568,14 +575,15 @@ Accepts an array of `values`, where each value can be either a signal or non-sig
 ```javascript
 var s = sig()
 var t = sig()
-var u = any([s, 23, t])
-then(u, spread, log)
 
-put(s, 1)  // 1 0
-put(t, 3)  // 3 2
-put(s, 2)  // 2 0
-put(t, 1)  // 1 2
-put(s, 3)  // 3 0
+sig.any([s, 23, t])
+  .then(sig.spread, log)
+
+s.put(1)  // 1 0
+t.put(3)  // 3 2
+s.put(2)  // 2 0
+t.put(1)  // 1 2
+s.put(3)  // 3 0
 ```
 
 ### `any(obj)`
@@ -585,18 +593,19 @@ Identical to [`any(values)`](#anyvalues), except it handles an object of key-val
 ```javascript
 var s = sig()
 var t = sig()
-var u = any({
-  a: s,
-  b: 23,
-  c: t
-})
-then(u, spread, log)
 
-put(s, 1)  // 1 a
-put(t, 3)  // 3 c
-put(s, 2)  // 2 a
-put(t, 1)  // 1 c
-put(s, 3)  // 3 a
+sig.any({
+    a: s,
+    b: 23,
+    c: t
+  })
+  .then(sig.spread, log)
+
+s.put(1)  // 1 a
+t.put(3)  // 3 c
+s.put(2)  // 2 a
+t.put(1)  // 1 c
+s.put(3)  // 3 a
 ```
 
 ### `merge(values)`
@@ -606,14 +615,15 @@ Accepts an array of `values`, where each value can be either a signal or non-sig
 ```javascript
 var s = sig()
 var t = sig()
-var u = merge([s, 23, t])
-then(u, log)
 
-put(s, 1)  // 1
-put(t, 3)  // 3
-put(s, 2)  // 2
-put(t, 1)  // 1
-put(s, 3)  // 3
+sig.merge([s, 23, t])
+  .then(sig.log)
+
+s.put(1)  // 1
+t.put(3)  // 3
+s.put(2)  // 2
+t.put(1)  // 1
+s.put(3)  // 3
 ```
 
 ### `merge(obj)`
@@ -623,18 +633,19 @@ Identical to [`merge(values)`](#mergevalues), except it handles an object of key
 ```javascript
 var s = sig()
 var t = sig()
-var u = merge({
-  a: s,
-  b: 23,
-  c: t
-})
-then(u, log)
 
-put(s, 1)  // 1
-put(t, 3)  // 3
-put(s, 2)  // 2
-put(t, 1)  // 1
-put(s, 3)  // 3
+sig.merge({
+    a: s,
+    b: 23,
+    c: t
+  })
+  .then(sig.log)
+
+s.put(1)  // 1
+t.put(3)  // 3
+s.put(2)  // 2
+t.put(1)  // 1
+s.put(3)  // 3
 ```
 
 ### `update(s[, fn])`
@@ -649,23 +660,27 @@ var lookup = {
   u: sig()
 }
 
-vv(s)
-  (update, function(k) { return lookup[k] })
-  (then, log)
+s.update(function(k) { return lookup[k] })
+ .then(sig.log)
 
-put(s, 't')
-putMany(lookup.t, [1, 2, 3])
-// 1
-// 2
-// 3
+s.put(t)
 
-put(s, 'u')
-putMany(lookup.u, [4, 5, 6])
-// 4
-// 5
-// 6
+lookup.t
+ .put(1)  // 1
+ .put(2)  // 2
+ .put(3)  // 3
 
-putMany(lookup.t, [7, 8, 9])
+s.put(u)
+
+lookup.u
+ .put(4)  // 4
+ .put(5)  // 5
+ .put(6)  // 6
+
+lookup.t
+ .put(7)
+ .put(8)
+ .put(9)
 ```
 
 If `fn` returns a non-signal, its result is ignored.
@@ -677,23 +692,24 @@ var s = sig()
 var t = sig()
 var u = sig()
 
-vv(s)
-  (update)
-  (then, log)
+s.update()
+ .then(sig.log)
 
-put(s, t)
-putMany(t, [1, 2, 3])
-// 1
-// 2
-// 3
+s.put(t)
 
-put(s, u)
-putMany(t, [4, 5, 6])
-// 4
-// 5
-// 6
+t.put(1)  // 1
+ .put(2)  // 2
+ .put(3)  // 3
 
-putMany(t, [7, 8, 9])
+s.put(u)
+
+u.put(4)  // 4
+ .put(5)  // 5
+ .put(6)  // 6
+
+t.put(7)
+ .put(8)
+ .put(9)
 ```
 
 ### `append(s[, fn])`
@@ -708,26 +724,27 @@ var lookup = {
   u: sig()
 }
 
-vv(s)
-  (append, function(k) { return lookup[k] })
-  (then, log)
+s.append(function(k) { return lookup[k] })
+ .then(sig.log)
 
-put(s, 't')
-putMany(lookup.t, [1, 2, 3])
-// 1
-// 2
-// 3
+s.put(t)
 
-put(s, 'u')
-putMany(lookup.u, [4, 5, 6])
-// 4
-// 5
-// 6
+lookup.t
+ .put(1)  // 1
+ .put(2)  // 2
+ .put(3)  // 3
 
-putMany(lookup.t, [7, 8, 9])
-// 7
-// 8
-// 9
+s.put(u)
+
+lookup.u
+ .put(4)  // 4
+ .put(5)  // 5
+ .put(6)  // 6
+
+lookup.t
+ .put(7)  // 7
+ .put(8)  // 8
+ .put(9)  // 9
 ```
 
 If `fn` returns a non-signal, its result is ignored.
@@ -739,42 +756,40 @@ var s = sig()
 var t = sig()
 var u = sig()
 
-vv(s)
-  (append)
-  (then, log)
+s.append()
+ .then(sig.log)
 
-put(s, t)
-putMany(t, [1, 2, 3])
-// 1
-// 2
-// 3
+s.put(t)
 
-put(s, u)
-putMany(t, [4, 5, 6])
-// 4
-// 5
-// 6
+t.put(1)  // 1
+ .put(2)  // 2
+ .put(3)  // 3
 
-putMany(t, [7, 8, 9])
-// 7
-// 8
-// 9
+s.put(u)
+
+u.put(4)  // 4
+ .put(5)  // 5
+ .put(6)  // 6
+
+t.put(7)  // 7
+ .put(8)  // 8
+ .put(9)  // 9
 ```
 
 ### `limit(s, n)`
 
 Creates and returns a new signal that only propogates the first `n` values it receives from signal `s`.
 
-```javascript
+```javascriupdatept
 var s = sig()
-var t = limit(s, 3)
-then(t, log)
+s.limit(3)
+ .then(sig.log)
 
-put(s, 21)  // 21
-put(s, 22)  // 22
-put(s, 23)  // 23
-put(s, 23)
-put(s, 23)
+s.put(21)  // 21
+ .put(22)  // 22
+ .put(23)  // 23
+ .put(24)
+ .put(25)
 ```
 
 ### `once(s)`
@@ -783,12 +798,12 @@ Special case of `limit` where `n === 1`.
 
 ```javascript
 var s = sig()
-var t = once(s)
-then(t, log)
+s.once()
+ .then(sig.log)
 
-put(s, 21)  // 21
-put(s, 22)
-put(s, 23)
+s.put(21)  // 21
+ .put(22)
+ .put(23)
 ```
 
 ### `redir(s, t)`
@@ -798,19 +813,18 @@ Redirects values and errors put through signal `s` to signal `t`. The returned s
 ```javascript
 function join(a, b) {
   var out = sig()
-  redir(a, out)
-  redir(b, out)
+  a.redir(out)
+  b.redir(out)
   return out
 }
 
 
 var a = sig()
 var b = sig()
-var s = join(a, b)
-then(s, log)
+join(a, b).then(sig.log)
 
-put(a, 21)  // 21
-put(b, 23)  // 23
+a.put(21)  // 21
+b.put(23)  // 23
 ```
 
 ### `source(t, s)`
@@ -820,10 +834,10 @@ Sets signal `s` as the source of signal `t` and returns `t`.
 ```javascript
 var s = sig()
 var t = sig()
-then(t, log)
+t.then(sig.log)
 
-source(t, s)
-put(s, 23)  // 23
+t.source(s)
+s.put(23)  // 23
 ```
 
 ### `unsource(t)`
@@ -833,13 +847,13 @@ Unsets the source signal of signal `t`.
 ```javascript
 var s = sig()
 var t = sig()
-then(t, log)
+t.then(log)
 
-source(t, s)
-put(s, 21)  // 21
+t.source(s)
+s.put(21)  // 21
 
-unsource(t)
-put(s, 23)
+t.unsource()
+s.put(23)
 ```
 
 ### `receive(s, v)`
@@ -850,7 +864,7 @@ Gives the value `v` to the receiver function of signal `s`.
 var s = sig()
 s.receiver = function(v) { console.log(v) }
 
-receive(s, 23)  // 23
+s.receive(23)  // 23
 ```
 
 ### `pause(s)`
@@ -859,13 +873,13 @@ Pauses signal `s`, causing any new values put through `s` to get buffered.
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-put(s, 21)  // 21
-pause(s)
+s.put(21)  // 21
+s.pause()
 
-put(s, 23)
-resume(s)  // 23
+s.put(23)
+s.resume()  // 23
 ```
 
 ### `resume(s)`
@@ -874,13 +888,13 @@ Resumes signal `s`, causing the buffered values to be sent to `s`'s targets and 
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-put(s, 21)  // 21
-pause(s)
+s.put(21)  // 21
+s.pause()
 
-put(s, 23)
-resume(s)  // 23
+s.put(23)
+s.resume()  // 23
 ```
 
 ### `setup(s, fn)`
@@ -889,15 +903,15 @@ Calls `fn`, then schedules it to be called again when `s` is reconnected because
 
 ```javascript
 function tick() {
-  var s = sig()
   var id
+  var s = sig()
 
   // this setup function gets called immediately
-  setup(s, function() {
+  s.setup(function() {
     id = setInterval(resolve, 200, s)
   })
 
-  teardown(s, function() {
+  s.teardown(function() {
     clearInterval(id)
   })
 
@@ -905,15 +919,14 @@ function tick() {
 }
 
 var s = tick()
-
-var t = then(s, log)
+var t = s.then(sig.log)
 
 // the teardown function would get called here
-reset(t)
+t.reset()
 
 // a reconnect occurs at this point since `s` has regained a target, so the setup
 // function would get called here
-then(s, log)
+s.then(sig.log)
 ```
 
 ### `teardown(s, fn)`
@@ -925,24 +938,25 @@ function tick() {
   var s = sig()
   var id
 
-  setup(s, function() {
+  s.setup(function() {
     id = setInterval(resolve, 200, s)
   })
 
-  teardown(s, function() { clearInterval(id)
+  s.teardown(function() {
+    clearInterval(id)
   })
 
   return s
 }
 
 var s = tick()
-var t = then(s, log)
+var t = s.then(sig.log)
 
 // this would call the teardown function because of a bottom-up disconnect
-reset(t)
+t.reset()
 
 // this would call the teardown function because `s` gets reset explicitly
-reset(s)
+s.reset()
 ```
 
 ### `spread(args, fn)`
@@ -951,8 +965,8 @@ Identical to [`Function.prototype.apply`](https://developer.mozilla.org/en-US/do
 
 ```javascript
 var s = sig()
-then(s, spread, log)
-put(s, [1, 2, 3])  // 1 2 3
+s.then(sig.spread, sig.log)
+s.put([1, 2, 3])  // 1 2 3
 ```
 
 ### `to(v, s)`
@@ -961,12 +975,8 @@ Identical to [`put`](#puts-v), except it takes the value as the first argument a
 
 ```javascript
 var s = sig()
-then(s, log)
-
-vv(23)
-  (function(v) { return v * 2 })
-  (function(v) { return v + 1 })
-  (to, s)  // 47
+s.then(sig.log)
+sig.to(23, s)  // 23
 ```
 
 ### `resolve(s)`
@@ -975,9 +985,9 @@ Special case of [`put`](#puts-v) where `v` is `null`.
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-resolve(s)  // null
+s.resolve()  // null
 ```
 
 ### `putMany(s, values)`
@@ -986,9 +996,9 @@ Puts each value in a `values` array through the signal `s`.
 
 ```javascript
 var s = sig()
-then(s, log)
+s.then(sig.log)
 
-putMany(s, [1, 2, 3])
+s.putMany([1, 2, 3])
 // 1
 // 2
 // 3
@@ -999,8 +1009,8 @@ putMany(s, [1, 2, 3])
 Returns `true` if `v` is a signal, `false` if it is not.
 
 ```javascript
-isSig(23)  // => false
-isSig(sig())  // => true
+sig.isSig(23)  // => false
+sig.isSig(sig())  // => true
 ```
 
 ### `log([arg1[, arg2[, ...]]])`

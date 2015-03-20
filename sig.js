@@ -5,59 +5,26 @@
   var _slice = Array.prototype.slice
   var _log = console.log
 
-  sig.reset = reset
-  sig.disconnect = disconnect
-  sig.reconnect = reconnect
-  sig.put = put
-  sig.to = to
-  sig.resolve = resolve
-  sig.putMany = putMany
-  sig.receive = receive
-  sig.source = source
-  sig.unsource = unsource
-  sig.pause = pause
-  sig.resume = resume
-  sig.raise = raise
-  sig.except = except
-  sig.setup = setup
-  sig.teardown = teardown
-  sig.map = map
-  sig.filter = filter
-  sig.flatten = flatten
-  sig.limit = limit
-  sig.once = once
-  sig.then = then
-  sig.ensure = ensure
-  sig.any = any
-  sig.all = all
-  sig.merge = merge
-  sig.spread = spread
-  sig.isSig = isSig
-  sig.nil = nil
-  sig.val = val
-  sig.ensureVal = ensureVal
-  sig.redir = redir
-  sig.log = log
-  sig.update = update
-  sig.append = append
-
 
   function sig(obj) {
     if (isSig(obj)) return obj
 
-    var s = resetProps({
-      targets: [],
-      source: null,
-      type: 'sig',
-      eager: true,
-      sticky: false,
-      receiver: putReceiver,
-      errorHandler: raiseHandler
-    })
+    var s = new Sig()
+    s._targets = []
+    s._source = null
+    s.eager = true
+    s.sticky = false
+    s.receiver = putReceiver
+    s.errorHandler = raiseHandler
+    resetProps(s)
 
     if (arguments.length) putMany(s, obj)
     return s
   }
+
+
+  function Sig() {}
+  Sig.prototype = sig.prototype
 
 
   function putReceiver(x) {
@@ -98,24 +65,24 @@
 
 
   function resetTargets(s) {
-    s.targets.forEach(resetTarget)
+    s._targets.forEach(resetTarget)
     return s
   }
 
 
   function resetTarget(t) {
-    t.targets.forEach(resetTarget)
+    t._targets.forEach(resetTarget)
     reset(t)
     return t
   }
 
 
   function disconnect(t) {
-    var s = t.source
+    var s = t._source
 
     if (s) {
       rmTarget(s, t)
-      if (!s.targets.length) disconnect(s)
+      if (!s._targets.length) disconnect(s)
     }
 
     t.disconnected = true
@@ -125,7 +92,7 @@
 
 
   function reconnect(t) {
-    var s = t.source
+    var s = t._source
 
     if (s) {
       rmTarget(s, t)
@@ -141,34 +108,34 @@
 
 
   function addTarget(s, t) {
-    s.targets.push(t)
+    s._targets.push(t)
     return s
   }
 
 
   function rmTarget(s, t) {
-    rm(s.targets, t)
+    rm(s._targets, t)
     return s
   }
 
 
   function setSource(t, s) {
-    if (t.source) raise(t, new Error(
+    if (t._source) raise(t, new Error(
       "Cannot set signal's source, signal already has a source"))
-    else t.source = s
+    else t._source = s
     return t
   }
 
 
   function unsetSource(t) {
-    t.source = null
+    t._source = null
     return t
   }
 
 
   function source(t, s) {
     var disconnected = s.disconnected
-    var firstTarget = !disconnected && !s.targets.length
+    var firstTarget = !disconnected && !s._targets.length
 
     setSource(t, s)
     addTarget(s, t)
@@ -237,7 +204,7 @@
 
 
   function propogateError(s, e) {
-    var targets = s.targets
+    var targets = s._targets
     var n = targets.length
     if (!n) throw e
 
@@ -266,7 +233,7 @@
 
 
   function send(s, x) {
-    var targets = s.targets
+    var targets = s._targets
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], x)
@@ -506,7 +473,7 @@
 
 
   function isSig(s) {
-    return (s || 0).type == 'sig'
+    return s instanceof Sig
   }
 
 
@@ -517,6 +484,11 @@
 
   function log() {
     return _log.apply(console, arguments)
+  }
+
+
+  function call(s, fn) {
+    return fn.apply(s, [s].concat(slice(arguments, 2)))
   }
 
 
@@ -572,6 +544,54 @@
   function identity(x) {
     return x
   }
+
+
+  function method(fn) {
+    return function() {
+      return fn.apply(this, [this].concat(slice(arguments)))
+    }
+  }
+
+
+  sig.nil = nil
+  sig.val = val
+  sig.log = log
+  sig.method = method
+  sig.any = any
+  sig.all = all
+  sig.merge = merge
+  sig.spread = spread
+  sig.isSig = isSig
+  sig.ensure = ensure
+  sig.ensureVal = ensureVal
+
+
+  sig.prototype.reset = method(sig.reset = reset)
+  sig.prototype.disconnect = method(sig.disconnect = disconnect)
+  sig.prototype.reconnect = method(sig.reconnect = reconnect)
+  sig.prototype.put = method(sig.put = put)
+  sig.prototype.to = method(sig.to = to)
+  sig.prototype.resolve = method(sig.resolve = resolve)
+  sig.prototype.putMany = method(sig.putMany = putMany)
+  sig.prototype.receive = method(sig.receive = receive)
+  sig.prototype.source = method(sig.source = source)
+  sig.prototype.unsource = method(sig.unsource = unsource)
+  sig.prototype.pause = method(sig.pause = pause)
+  sig.prototype.resume = method(sig.resume = resume)
+  sig.prototype.raise = method(sig.raise = raise)
+  sig.prototype.except = method(sig.except = except)
+  sig.prototype.setup = method(sig.setup = setup)
+  sig.prototype.teardown = method(sig.teardown = teardown)
+  sig.prototype.map = method(sig.map = map)
+  sig.prototype.filter = method(sig.filter = filter)
+  sig.prototype.flatten = method(sig.flatten = flatten)
+  sig.prototype.limit = method(sig.limit = limit)
+  sig.prototype.once = method(sig.once = once)
+  sig.prototype.then = method(sig.then = then)
+  sig.prototype.redir = method(sig.redir = redir)
+  sig.prototype.update = method(sig.update = update)
+  sig.prototype.append = method(sig.append = append)
+  sig.prototype.call = method(sig.call = call)
 
 
   if (typeof module != 'undefined')
