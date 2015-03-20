@@ -1,4 +1,4 @@
-# sig
+m# sig
 
 ![Build Status](https://api.travis-ci.org/justinvdm/sig.png)
 
@@ -384,7 +384,7 @@ Sets the signal `s` as the source of the signal `t` and returns `t`.
 ```javascript
 var s = sig()
 var t = sig()
-t.receiver = function(v) { return v }
+t.receiver = sig.log
 
 s.then(t)
 s.put(23)  // 23
@@ -864,7 +864,7 @@ Gives the value `v` to the receiver function of signal `s`.
 
 ```javascript
 var s = sig()
-s.receiver = function(v) { console.log(v) }
+s.receiver = sig.log
 
 s.receive(23)  // 23
 ```
