@@ -663,14 +663,14 @@ var lookup = {
 s.update(function(k) { return lookup[k] })
  .then(sig.log)
 
-s.put(t)
+s.put('t')
 
 lookup.t
  .put(1)  // 1
  .put(2)  // 2
  .put(3)  // 3
 
-s.put(u)
+s.put('u')
 
 lookup.u
  .put(4)  // 4
@@ -727,14 +727,14 @@ var lookup = {
 s.append(function(k) { return lookup[k] })
  .then(sig.log)
 
-s.put(t)
+s.put('t')
 
 lookup.t
  .put(1)  // 1
  .put(2)  // 2
  .put(3)  // 3
 
-s.put(u)
+s.put('u')
 
 lookup.u
  .put(4)  // 4
@@ -780,8 +780,9 @@ t.put(7)  // 7
 
 Creates and returns a new signal that only propogates the first `n` values it receives from signal `s`.
 
-```javascriupdatept
+```javascript
 var s = sig()
+
 s.limit(3)
  .then(sig.log)
 
@@ -798,6 +799,7 @@ Special case of `limit` where `n === 1`.
 
 ```javascript
 var s = sig()
+
 s.once()
  .then(sig.log)
 
