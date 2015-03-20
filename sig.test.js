@@ -66,11 +66,11 @@ describe("sig", function() {
     // |     |
     // v     v
     // c     d     e
-    assert.deepEqual(a._targets, [b])
-    assert.strictEqual(b._source, a)
-    assert.deepEqual(b._targets, [c, d])
-    assert.strictEqual(c._source, b)
-    assert.strictEqual(d._source, b)
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [c, d])
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
 
     a.reset()
 
@@ -81,11 +81,11 @@ describe("sig", function() {
     //        
     //        
     // c     d     e
-    assert(!a._targets.length)
-    assert.strictEqual(b._source, null)
-    assert(!b._targets.length)
-    assert.strictEqual(c._source, null)
-    assert.strictEqual(d._source, null)
+    assert(!a.targets.length)
+    assert.strictEqual(b.source, null)
+    assert(!b.targets.length)
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
 
     b.then(e)
 
@@ -96,12 +96,12 @@ describe("sig", function() {
     //             |
     //             v
     // c     d     e
-    assert(!a._targets.length)
-    assert.strictEqual(b._source, null)
-    assert.deepEqual(b._targets, [e])
-    assert.strictEqual(c._source, null)
-    assert.strictEqual(d._source, null)
-    assert.strictEqual(e._source, b)
+    assert(!a.targets.length)
+    assert.strictEqual(b.source, null)
+    assert.deepEqual(b.targets, [e])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
+    assert.strictEqual(e.source, b)
   })
 
   it("should support bottom-up signal resets", function() {
@@ -124,11 +124,11 @@ describe("sig", function() {
     // c     d     e
     assert(!a.disconnected)
     assert(!b.disconnected)
-    assert.deepEqual(a._targets, [b])
-    assert.deepEqual(b._source, a)
-    assert.deepEqual(b._targets, [c, d])
-    assert.deepEqual(c._source, b)
-    assert.deepEqual(d._source, b)
+    assert.deepEqual(a.targets, [b])
+    assert.deepEqual(b.source, a)
+    assert.deepEqual(b.targets, [c, d])
+    assert.deepEqual(c.source, b)
+    assert.deepEqual(d.source, b)
 
     c.reset()
 
@@ -141,11 +141,11 @@ describe("sig", function() {
     // c     d     e
     assert(!a.disconnected)
     assert(!b.disconnected)
-    assert.deepEqual(a._targets, [b])
-    assert.strictEqual(b._source, a)
-    assert.deepEqual(b._targets, [d])
-    assert.strictEqual(c._source, null)
-    assert.deepEqual(d._source, b)
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [d])
+    assert.strictEqual(c.source, null)
+    assert.deepEqual(d.source, b)
 
     d.reset()
 
@@ -158,11 +158,11 @@ describe("sig", function() {
     // c     d     e
     assert(a.disconnected)
     assert(b.disconnected)
-    assert(!a._targets.length)
-    assert.deepEqual(b._source, a)
-    assert(!b._targets.length)
-    assert.strictEqual(c._source, null)
-    assert.strictEqual(d._source, null)
+    assert(!a.targets.length)
+    assert.deepEqual(b.source, a)
+    assert(!b.targets.length)
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
 
     b.then(e)
 
@@ -175,12 +175,12 @@ describe("sig", function() {
     // c     d     e
     assert(!a.disconnected)
     assert(!b.disconnected)
-    assert.deepEqual(a._targets, [b])
-    assert.strictEqual(b._source, a)
-    assert.deepEqual(b._targets, [e])
-    assert.strictEqual(c._source, null)
-    assert.strictEqual(d._source, null)
-    assert.strictEqual(e._source, b)
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [e])
+    assert.strictEqual(c.source, null)
+    assert.strictEqual(d.source, null)
+    assert.strictEqual(e.source, b)
   })
 
   it("should support signal ending", function() {
@@ -305,7 +305,7 @@ describe("sig", function() {
       done()
     }
 
-    t.source(s)
+    s.then(t)
     s.resolve()
   })
 
@@ -352,7 +352,7 @@ describe("sig", function() {
     var t = sig()
 
     function addSource() {
-      t.source(sig())
+      sig().then(t)
     }
 
     addSource()
@@ -425,24 +425,6 @@ describe("sig", function() {
     assert(!results2.length)
   })
 
-  it("should allow a signal to stop sourceing another", function() {
-    var results = []
-    var s = sig()
-
-    var t = sig()
-    t.receiver = function(x) { results.push(x) }
-
-    t.source(s)
-    t.unsource(s)
-
-    s.put(1)
-     .put(2)
-     .put(3)
-     .put(4)
-
-    assert(!results.length)
-  })
-
   it("should act as an indentity for existing signals", function() {
     var s = sig()
     assert.strictEqual(sig(s), s)
@@ -483,15 +465,15 @@ describe("sig", function() {
       var s = sig()
       var t = sig()
       s.then(t)
-      assert.deepEqual(s._targets, [t])
-      assert.strictEqual(t._source, s)
+      assert.deepEqual(s.targets, [t])
+      assert.strictEqual(t.source, s)
     })
 
     it("should support creating and connecting to a new target", function() {
       var s = sig()
       var t = s.then(receiver)
-      assert.deepEqual(s._targets, [t])
-      assert.strictEqual(t._source, s)
+      assert.deepEqual(s.targets, [t])
+      assert.strictEqual(t.source, s)
       assert.strictEqual(t.receiver, receiver)
       function receiver() {}
     })
@@ -793,12 +775,12 @@ describe("sig", function() {
       var a = sig()
       var b = sig()
       var s = sig.any([a, b])
-      assert.equal(a._targets.length, 1)
-      assert.equal(b._targets.length, 1)
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
 
       s.reset()
-      assert(!a._targets.length)
-      assert(!b._targets.length)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
     })
 
     it("should handle errors from its source signals", function() {
@@ -961,12 +943,12 @@ describe("sig", function() {
       var a = sig()
       var b = sig()
       var s = sig.all([a, b])
-      assert.equal(a._targets.length, 1)
-      assert.equal(b._targets.length, 1)
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
 
       s.reset()
-      assert(!a._targets.length)
-      assert(!b._targets.length)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
     })
 
     it("should work with signals with non-empty buffers", function() {
@@ -1051,12 +1033,12 @@ describe("sig", function() {
       var a = sig()
       var b = sig()
       var s = sig.merge([a, b])
-      assert.equal(a._targets.length, 1)
-      assert.equal(b._targets.length, 1)
+      assert.equal(a.targets.length, 1)
+      assert.equal(b.targets.length, 1)
 
       s.reset()
-      assert(!a._targets.length)
-      assert(!b._targets.length)
+      assert(!a.targets.length)
+      assert(!b.targets.length)
     })
 
     it("should handle errors from its source signals", function() {

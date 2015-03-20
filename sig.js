@@ -11,8 +11,8 @@
     if (isSig(obj)) return obj
 
     var s = new Sig()
-    s._targets = []
-    s._source = null
+    s.targets = []
+    s.source = null
     s.eager = true
     s.sticky = false
     s.receiver = putReceiver
@@ -66,24 +66,24 @@
 
 
   function resetTargets(s) {
-    s._targets.forEach(resetTarget)
+    s.targets.forEach(resetTarget)
     return s
   }
 
 
   function resetTarget(t) {
-    t._targets.forEach(resetTarget)
+    t.targets.forEach(resetTarget)
     reset(t)
     return t
   }
 
 
   function disconnect(t) {
-    var s = t._source
+    var s = t.source
 
     if (s) {
       rmTarget(s, t)
-      if (!s._targets.length) disconnect(s)
+      if (!s.targets.length) disconnect(s)
     }
 
     t.disconnected = true
@@ -93,7 +93,7 @@
 
 
   function reconnect(t) {
-    var s = t._source
+    var s = t.source
 
     if (s) {
       rmTarget(s, t)
@@ -109,47 +109,27 @@
 
 
   function addTarget(s, t) {
-    s._targets.push(t)
+    s.targets.push(t)
     return s
   }
 
 
   function rmTarget(s, t) {
-    rm(s._targets, t)
+    rm(s.targets, t)
     return s
   }
 
 
   function setSource(t, s) {
-    if (t._source) raise(t, new Error(
+    if (t.source) raise(t, new Error(
       "Cannot set signal's source, signal already has a source"))
-    else t._source = s
+    else t.source = s
     return t
   }
 
 
   function unsetSource(t) {
-    t._source = null
-    return t
-  }
-
-
-  function source(t, s) {
-    var disconnected = s.disconnected
-    var firstTarget = !disconnected && !s._targets.length
-
-    setSource(t, s)
-    addTarget(s, t)
-
-    if (disconnected) reconnect(s)
-    if (s.eager && firstTarget) resume(s)
-    else if (s.sticky && s.current != _nil_) receive(t, s.current)
-    return t
-  }
-
-
-  function unsource(t) {
-    resetSource(t)
+    t.source = null
     return t
   }
 
@@ -160,7 +140,7 @@
 
 
   function finish(s) {
-    if (s._targets.length) end(s)
+    if (s.targets.length) end(s)
     else reset(s)
   }
 
@@ -217,7 +197,7 @@
 
 
   function propogateError(s, e) {
-    var targets = s._targets
+    var targets = s.targets
     var n = targets.length
     if (!n) throw e
 
@@ -230,7 +210,7 @@
   function except(s, fn) {
     var t = sig()
     t.errorHandler = prime(slice(arguments, 2), fn)
-    source(t, s)
+    thenSig(s, t)
     return t
   }
 
@@ -246,11 +226,7 @@
 
 
   function send(s, x) {
-    // we want each of the current targets to be sent `x`, and for the targets
-    // to be sent `x` in the order determined by their index in the array,
-    // regardless of what happens to the signal's targets array each iteration
-    // in the send loop. we slice to ensure this.
-    var targets = slice(s._targets)
+    var targets = slice(s.targets)
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], x)
@@ -279,7 +255,15 @@
 
 
   function thenSig(s, t) {
-    source(t, s)
+    var disconnected = s.disconnected
+    var firstTarget = !disconnected && !s.targets.length
+
+    setSource(t, s)
+    addTarget(s, t)
+
+    if (disconnected) reconnect(s)
+    if (s.eager && firstTarget) resume(s)
+    else if (s.sticky && s.current != _nil_) receive(t, s.current)
     return t
   }
 
@@ -592,8 +576,6 @@
   sig.prototype.resolve = method(sig.resolve = resolve)
   sig.prototype.putMany = method(sig.putMany = putMany)
   sig.prototype.receive = method(sig.receive = receive)
-  sig.prototype.source = method(sig.source = source)
-  sig.prototype.unsource = method(sig.unsource = unsource)
   sig.prototype.pause = method(sig.pause = pause)
   sig.prototype.resume = method(sig.resume = resume)
   sig.prototype.raise = method(sig.raise = raise)
