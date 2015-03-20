@@ -1,5 +1,6 @@
 ;(function() {
-  var nil = {}
+  var _nil_ = {}
+  var _end_ = {}
 
   var isArray = Array.isArray
   var _slice = Array.prototype.slice
@@ -39,7 +40,7 @@
 
   function resetProps(s) {
     s.paused = true
-    s.current = nil
+    s.current = _nil_
     s.buffer = []
     s.error = null
     s.disconnected = false
@@ -142,7 +143,7 @@
 
     if (disconnected) reconnect(s)
     if (s.eager && firstTarget) resume(s)
-    else if (s.sticky && s.current !== nil) receive(t, s.current)
+    else if (s.sticky && s.current != _nil_) receive(t, s.current)
     return t
   }
 
@@ -150,6 +151,17 @@
   function unsource(t) {
     resetSource(t)
     return t
+  }
+
+
+  function end(s) {
+    put(s, _end_)
+  }
+
+
+  function finish(s) {
+    if (s._targets.length) end(s)
+    else reset(s)
   }
 
 
@@ -170,7 +182,8 @@
 
 
   function receive(s, x) {
-    s.receiver.call(s, x)
+    if (x == _end_) finish(s)
+    else s.receiver.call(s, x)
     return s
   }
 
@@ -233,7 +246,11 @@
 
 
   function send(s, x) {
-    var targets = s._targets
+    // we want each of the current targets to be sent `x`, and for the targets
+    // to be sent `x` in the order determined by their index in the array,
+    // regardless of what happens to the signal's targets array each iteration
+    // in the send loop. we slice to ensure this.
+    var targets = slice(s._targets)
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], x)
@@ -351,6 +368,7 @@
     
     return then(s, function(x) {
       if (++i <= n) put(this, x)
+      if (i >= n) end(this)
     })
   }
 
@@ -553,7 +571,6 @@
   }
 
 
-  sig.nil = nil
   sig.val = val
   sig.log = log
   sig.method = method
@@ -566,6 +583,7 @@
   sig.ensureVal = ensureVal
 
 
+  sig.prototype.end = method(sig.end = end)
   sig.prototype.reset = method(sig.reset = reset)
   sig.prototype.disconnect = method(sig.disconnect = disconnect)
   sig.prototype.reconnect = method(sig.reconnect = reconnect)
@@ -592,6 +610,7 @@
   sig.prototype.update = method(sig.update = update)
   sig.prototype.append = method(sig.append = append)
   sig.prototype.call = method(sig.call = call)
+  sig._on = on
 
 
   if (typeof module != 'undefined')

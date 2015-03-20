@@ -183,6 +183,38 @@ describe("sig", function() {
     assert.strictEqual(e._source, b)
   })
 
+  it("should support signal ending", function() {
+    var a = sig()
+    var b = sig()
+    var c = sig()
+    var d = sig()
+    var cValues = capture(c)
+    var dValues = capture(d)
+
+    a.then(b)
+    b.then(c)
+    b.then(d)
+
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(!c.disconnected)
+    assert(!d.disconnected)
+    assert(!cValues.length)
+    assert(!dValues.length)
+
+    b.put(1)
+     .put(2)
+     .put(3)
+     .end()
+
+    assert(a.disconnected)
+    assert(b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+    assert.deepEqual(cValues, [1, 2, 3])
+    assert.deepEqual(dValues, [1, 2, 3])
+  })
+
   it("should support error handling", function(done) {
     var s = sig()
     var e = new Error(':/')
@@ -645,6 +677,29 @@ describe("sig", function() {
         .call(sink)
         .then(assert.deepEqual, [1, 2, 3])
     })
+
+    it("should end the signal chain once the limit is reached", function() {
+      var s = sig()
+      s.limit(3).then(sig())
+
+      assert(!s.disconnected)
+
+      s.put(1)
+      assert(!s.disconnected)
+
+      s.put(2)
+      assert(!s.disconnected)
+
+      s.put(3)
+      assert(s.disconnected)
+    })
+
+    it("should not output anything if the limit is 0", function() {
+      sig([1, 2, 3, 4, 5, 6])
+        .limit(0)
+        .call(sink)
+        .then(assert.deepEqual, [])
+    })
   })
 
 
@@ -654,6 +709,15 @@ describe("sig", function() {
         .once()
         .call(sink)
         .then(assert.deepEqual, [1])
+    })
+
+    it("should end the signal chain after outputting a value", function() {
+      var s = sig()
+      s.once().then(sig())
+
+      assert(!s.disconnected)
+      s.put(23)
+      assert(s.disconnected)
     })
   })
 
