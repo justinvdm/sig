@@ -49,7 +49,7 @@ describe("sig", function() {
     assert.deepEqual(results, [2, 4])
   })
 
-  it("should support top-down signal resets", function() {
+  it("should support top-down disconnects", function() {
     var a = sig()
     var b = sig()
     var c = sig()
@@ -66,89 +66,18 @@ describe("sig", function() {
     // |     |
     // v     v
     // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(!c.disconnected)
+    assert(!d.disconnected)
+    assert(!e.disconnected)
     assert.deepEqual(a.targets, [b])
     assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [c, d])
     assert.strictEqual(c.source, b)
     assert.strictEqual(d.source, b)
 
-    a.reset()
-
-    //       a
-    //        
-    //        
-    //       b      
-    //        
-    //        
-    // c     d     e
-    assert(!a.targets.length)
-    assert.strictEqual(b.source, null)
-    assert(!b.targets.length)
-    assert.strictEqual(c.source, null)
-    assert.strictEqual(d.source, null)
-
-    b.then(e)
-
-    //       a
-    //        
-    //        
-    //       b ----
-    //             |
-    //             v
-    // c     d     e
-    assert(!a.targets.length)
-    assert.strictEqual(b.source, null)
-    assert.deepEqual(b.targets, [e])
-    assert.strictEqual(c.source, null)
-    assert.strictEqual(d.source, null)
-    assert.strictEqual(e.source, b)
-  })
-
-  it("should support bottom-up signal resets", function() {
-    var a = sig()
-    var b = sig()
-    var c = sig()
-    var d = sig()
-    var e = sig()
-
-    a.then(b)
-    b.then(c)
-    b.then(d)
-
-    //       a
-    //       |
-    //       v
-    //  ---- b      
-    // |     |
-    // v     v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.deepEqual(b.source, a)
-    assert.deepEqual(b.targets, [c, d])
-    assert.deepEqual(c.source, b)
-    assert.deepEqual(d.source, b)
-
-    c.reset()
-
-    //       a
-    //       |
-    //       v
-    //       b      
-    //       |
-    //       v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.strictEqual(b.source, a)
-    assert.deepEqual(b.targets, [d])
-    assert.strictEqual(c.source, null)
-    assert.deepEqual(d.source, b)
-
-    d.reset()
-
+    a.end()
     //       a
     //        
     //        
@@ -158,14 +87,16 @@ describe("sig", function() {
     // c     d     e
     assert(a.disconnected)
     assert(b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+    assert(!e.disconnected)
     assert(!a.targets.length)
-    assert.deepEqual(b.source, a)
+    assert.strictEqual(b.source, a)
     assert(!b.targets.length)
-    assert.strictEqual(c.source, null)
-    assert.strictEqual(d.source, null)
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
 
     b.then(e)
-
     //       a
     //       |
     //       v
@@ -175,11 +106,97 @@ describe("sig", function() {
     // c     d     e
     assert(!a.disconnected)
     assert(!b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+    assert(!e.disconnected)
     assert.deepEqual(a.targets, [b])
     assert.strictEqual(b.source, a)
     assert.deepEqual(b.targets, [e])
-    assert.strictEqual(c.source, null)
-    assert.strictEqual(d.source, null)
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
+    assert.strictEqual(e.source, b)
+  })
+
+  it("should support bottom-up disconnects", function() {
+    var a = sig()
+    var b = sig()
+    var c = sig()
+    var d = sig()
+    var e = sig()
+
+    a.then(b)
+    b.then(c)
+    b.then(d)
+    //       a
+    //       |
+    //       v
+    //  ---- b      
+    // |     |
+    // v     v
+    // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(!c.disconnected)
+    assert(!d.disconnected)
+    assert.deepEqual(a.targets, [b])
+    assert.deepEqual(b.source, a)
+    assert.deepEqual(b.targets, [c, d])
+    assert.deepEqual(c.source, b)
+    assert.strictEqual(d.source, b)
+
+    c.end()
+    //       a
+    //       |
+    //       v
+    //       b      
+    //       |
+    //       v
+    // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(c.disconnected)
+    assert(!d.disconnected)
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [d])
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
+
+    d.end()
+    //       a
+    //        
+    //        
+    //       b      
+    //        
+    //        
+    // c     d     e
+    assert(a.disconnected)
+    assert(b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+    assert(!a.targets.length)
+    assert.strictEqual(b.source, a)
+    assert(!b.targets.length)
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
+
+    b.then(e)
+    //       a
+    //       |
+    //       v
+    //       b ----
+    //             |
+    //             v
+    // c     d     e
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+    assert.deepEqual(a.targets, [b])
+    assert.strictEqual(b.source, a)
+    assert.deepEqual(b.targets, [e])
+    assert.strictEqual(c.source, b)
+    assert.strictEqual(d.source, b)
     assert.strictEqual(e.source, b)
   })
 
@@ -385,44 +402,60 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it("should allow a target signal to be reset", function() {
-    var results = []
-    var s = sig()
+  it("should allow a target signal to end", function() {
+    var a = sig()
+    var b = sig()
+    var results = capture(b)
+    a.then(b)
 
-    var t = sig()
-    t.receiver = function(x) { results.push(x) }
+    assert(!a.disconnected)
+    assert(!b.disconnected)
 
-    s.then(t)
-    t.reset()
-
-    s.put(1)
-     .put(2)
-
-    assert(!results.length)
-  })
-
-  it("should allow a source signal to be reset", function() {
-    var results1 = []
-    var results2 = []
-    var s = sig()
-
-    var t1 = sig()
-    t1.receiver = function(x) { results1.put(x) }
-
-    var t2 = sig()
-    t2.receiver = function(x) { results2.put(x) }
-
-    s.then(t1)
-    s.then(t2)
-    s.reset()
-
-    s.put(1)
+    a.put(1)
      .put(2)
      .put(3)
-     .put(4)
 
-    assert(!results1.length)
-    assert(!results2.length)
+    b.end()
+
+    assert(a.disconnected)
+    assert(b.disconnected)
+
+    a.put(4)
+    assert.deepEqual(results, [1, 2, 3])
+  })
+
+  it("should allow a source signal to end", function() {
+    var a = sig()
+    var b = sig()
+    var c = sig()
+    var d = sig()
+    var cValues = capture(c)
+    var dValues = capture(d)
+
+    a.then(b)
+    b.then(c)
+    b.then(d)
+
+    assert(!a.disconnected)
+    assert(!b.disconnected)
+    assert(!c.disconnected)
+    assert(!d.disconnected)
+    assert(!cValues.length)
+    assert(!dValues.length)
+
+    b.put(1)
+     .put(2)
+     .put(3)
+     .end()
+
+    assert(a.disconnected)
+    assert(b.disconnected)
+    assert(c.disconnected)
+    assert(d.disconnected)
+
+    b.put(4)
+    assert.deepEqual(cValues, [1, 2, 3])
+    assert.deepEqual(dValues, [1, 2, 3])
   })
 
   it("should act as an indentity for existing signals", function() {
@@ -447,13 +480,14 @@ describe("sig", function() {
       s.eager = true
 
       assert(s.paused)
-
       var t = s.then(sig())
       assert(!s.paused)
 
-      t.reset()
       s.pause()
+      s.then(sig())
+      assert(s.paused)
 
+      t.end()
       s.then(sig())
       assert(s.paused)
     })
@@ -544,7 +578,7 @@ describe("sig", function() {
       var t = s.then(sig())
       assert(!run)
 
-      t.reset()
+      t.end()
       assert(!run)
 
       s.then(sig())
@@ -554,7 +588,7 @@ describe("sig", function() {
 
 
   describe(".teardown", function() {
-    it("should call the function when a signal is reset", function() {
+    it("should call the function when a signal ends", function() {
       var s = sig()
       var run = false
 
@@ -564,7 +598,7 @@ describe("sig", function() {
       })
 
       assert(!run)
-      s.reset()
+      s.end()
       assert(run)
     })
 
@@ -580,7 +614,7 @@ describe("sig", function() {
       var t = s.then(sig())
       assert(!run)
 
-      t.reset()
+      t.end()
       assert(run)
     })
   })
@@ -771,14 +805,14 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it("should reset all its listeners when the out signal is reset", function() {
+    it("should ends its listeners when the out signal ends", function() {
       var a = sig()
       var b = sig()
       var s = sig.any([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.reset()
+      s.end()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -939,14 +973,14 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it("should reset all its listeners when the out signal is reset", function() {
+    it("should ends its listeners when the out signal ends", function() {
       var a = sig()
       var b = sig()
       var s = sig.all([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.reset()
+      s.end()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -1029,14 +1063,14 @@ describe("sig", function() {
       assert.deepEqual(results, [1, 2, 3, 4])
     })
 
-    it("should reset all its listeners when the out signal is reset", function() {
+    it("should ends its listeners when the out signal ends", function() {
       var a = sig()
       var b = sig()
       var s = sig.merge([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.reset()
+      s.end()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -1339,7 +1373,7 @@ describe("sig", function() {
       s.raise(e)
     })
 
-    it("should not redirect after the target has been reset", function() {
+    it("should not redirect after the target has ended", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
@@ -1352,7 +1386,7 @@ describe("sig", function() {
 
       assert.deepEqual(results, [1, 2, 3])
 
-      t.reset()
+      t.end()
 
       s.put(4)
        .put(5)

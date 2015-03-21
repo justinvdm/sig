@@ -17,7 +17,12 @@
     s.sticky = false
     s.receiver = putReceiver
     s.errorHandler = raiseHandler
-    resetProps(s)
+    s.paused = true
+    s.current = _nil_
+    s.buffer = []
+    s.error = null
+    s.disconnected = false
+    s.eventListeners = {}
 
     if (arguments.length) putMany(s, obj)
     return s
@@ -38,47 +43,21 @@
   }
 
 
-  function resetProps(s) {
-    s.paused = true
-    s.current = _nil_
-    s.buffer = []
-    s.error = null
-    s.disconnected = false
-    s.eventListeners = {}
+  function connect(s, t) {
+    var firstTarget = !s.targets.length
+
+    setSource(t, s)
+    addTarget(s, t)
+
+    if (s.disconnected) reconnect(s)
+    if (s.eager && firstTarget) resume(s)
+    else if (s.sticky && s.current != _nil_) receive(t, s.current)
     return s
-  }
-
-
-  function reset(s) {
-    emit(s, 'reset')
-    resetSource(s)
-    resetTargets(s)
-    resetProps(s)
-    return s
-  }
-
-
-  function resetSource(t) {
-    disconnect(t)
-    unsetSource(t)
-    return t
-  }
-
-
-  function resetTargets(s) {
-    s.targets.forEach(resetTarget)
-    return s
-  }
-
-
-  function resetTarget(t) {
-    t.targets.forEach(resetTarget)
-    reset(t)
-    return t
   }
 
 
   function disconnect(t) {
+    if (t.disconnected) return t
     var s = t.source
 
     if (s) {
@@ -128,20 +107,10 @@
   }
 
 
-  function unsetSource(t) {
-    t.source = null
-    return t
-  }
-
-
   function end(s) {
+    disconnect(s)
     put(s, _end_)
-  }
-
-
-  function finish(s) {
-    if (s.targets.length) end(s)
-    else reset(s)
+    return s
   }
 
 
@@ -162,7 +131,7 @@
 
 
   function receive(s, x) {
-    if (x == _end_) finish(s)
+    if (x == _end_) end(s)
     else s.receiver.call(s, x)
     return s
   }
@@ -210,7 +179,7 @@
   function except(s, fn) {
     var t = sig()
     t.errorHandler = prime(slice(arguments, 2), fn)
-    thenSig(s, t)
+    then(s, t)
     return t
   }
 
@@ -255,15 +224,7 @@
 
 
   function thenSig(s, t) {
-    var disconnected = s.disconnected
-    var firstTarget = !disconnected && !s.targets.length
-
-    setSource(t, s)
-    addTarget(s, t)
-
-    if (disconnected) reconnect(s)
-    if (s.eager && firstTarget) resume(s)
-    else if (s.sticky && s.current != _nil_) receive(t, s.current)
+    connect(s, t)
     return t
   }
 
@@ -278,7 +239,7 @@
 
   function emit(s, event) {
     var args = slice(arguments, 2)
-    var listeners = s.eventListeners[event] || []
+    var listeners = slice(s.eventListeners[event] || [])
     var n = listeners.length
     var i = -1
     while (++ i < n) listeners[i].apply(s, args)
@@ -287,6 +248,7 @@
 
 
   function setup(s, fn) {
+    fn = prime(slice(arguments, 2), fn)
     on(s, 'reconnect', fn)
     fn.call(s)
     return s
@@ -294,8 +256,8 @@
 
 
   function teardown(s, fn) {
+    fn = prime(slice(arguments, 2), fn)
     on(s, 'disconnect', fn)
-    on(s, 'reset', fn)
     return s
   }
 
@@ -316,7 +278,7 @@
 
 
   function map(s, fn) {
-    return then(s, prime(slice(arguments, 2), function(x) {
+    return then(s, prime(slice(arguments, 2), function() {
       put(this, fn.apply(this, arguments))
     }))
   }
@@ -373,7 +335,7 @@
     var u
     u = then(s, to, t)
     u = except(u, raiseTo, t)
-    on(t, 'disconnect', function() { reset(u) })
+    teardown(t, end, u)
     return u
   }
 
@@ -447,7 +409,7 @@
     fn = prime(slice(arguments, 2), fn || identity)
 
     var t = then(s, function(x) {
-      if (curr) reset(curr)
+      if (curr) end(curr)
 
       var u = fn(x)
       if (!isSig(u)) return
@@ -497,8 +459,8 @@
   function prime(args, fn) {
     if (!args.length) return fn
 
-    return function(x) {
-      return fn.apply(this, [x].concat(args))
+    return function() {
+      return fn.apply(this, slice(arguments).concat(args))
     }
   }
 
@@ -568,7 +530,6 @@
 
 
   sig.prototype.end = method(sig.end = end)
-  sig.prototype.reset = method(sig.reset = reset)
   sig.prototype.disconnect = method(sig.disconnect = disconnect)
   sig.prototype.reconnect = method(sig.reconnect = reconnect)
   sig.prototype.put = method(sig.put = put)
@@ -592,7 +553,7 @@
   sig.prototype.update = method(sig.update = update)
   sig.prototype.append = method(sig.append = append)
   sig.prototype.call = method(sig.call = call)
-  sig._on = on
+  sig.prototype.emit = method(sig.emit = emit)
 
 
   if (typeof module != 'undefined')
