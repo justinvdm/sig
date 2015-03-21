@@ -555,38 +555,6 @@ describe("sig", function() {
   })
 
 
-  describe(".setup", function() {
-    it("should call the function immediately", function(done) {
-      var s = sig()
-
-      s.setup(function() {
-        assert.strictEqual(this, s)
-        done()
-      })
-    })
-
-    it("should call the function when a signal is reconnected", function() {
-      var s = sig()
-      var run
-
-      s.setup(function() {
-        run = true
-        assert.strictEqual(this, s)
-      })
-
-      run = false
-      var t = s.then(sig())
-      assert(!run)
-
-      t.end()
-      assert(!run)
-
-      s.then(sig())
-      assert(run)
-    })
-  })
-
-
   describe(".teardown", function() {
     it("should call the function when a signal ends", function() {
       var s = sig()
@@ -599,22 +567,6 @@ describe("sig", function() {
 
       assert(!run)
       s.end()
-      assert(run)
-    })
-
-    it("should call the function when a signal is disconnected", function() {
-      var s = sig()
-      var run = false
-
-      s.teardown(function() {
-        run = true
-        assert.strictEqual(this, s)
-      })
-
-      var t = s.then(sig())
-      assert(!run)
-
-      t.end()
       assert(run)
     })
   })
@@ -1221,7 +1173,6 @@ describe("sig", function() {
 
     it("should support additional args", function() {
       var s = sig()
-      var results = []
 
       var results = s
         .append(sig.map, function(x) { return x * 2 })

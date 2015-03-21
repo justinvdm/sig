@@ -108,6 +108,7 @@
 
 
   function end(s) {
+    emit(s, 'end')
     disconnect(s)
     put(s, _end_)
     return s
@@ -230,6 +231,7 @@
 
 
   function on(s, event, fn) {
+    fn = prime(slice(arguments, 3), fn)
     var listeners = s.eventListeners[event] || []
     s.eventListeners[event] = listeners
     listeners.push(fn)
@@ -247,17 +249,9 @@
   }
 
 
-  function setup(s, fn) {
-    fn = prime(slice(arguments, 2), fn)
-    on(s, 'reconnect', fn)
-    fn.call(s)
-    return s
-  }
-
-
   function teardown(s, fn) {
     fn = prime(slice(arguments, 2), fn)
-    on(s, 'disconnect', fn)
+    on(s, 'end', fn)
     return s
   }
 
@@ -335,7 +329,7 @@
     var u
     u = then(s, to, t)
     u = except(u, raiseTo, t)
-    teardown(t, end, u)
+    on(t, 'disconnect', disconnect, u)
     return u
   }
 
@@ -527,6 +521,7 @@
   sig.isSig = isSig
   sig.ensure = ensure
   sig.ensureVal = ensureVal
+  sig.prime = prime
 
 
   sig.prototype.end = method(sig.end = end)
@@ -541,7 +536,6 @@
   sig.prototype.resume = method(sig.resume = resume)
   sig.prototype.raise = method(sig.raise = raise)
   sig.prototype.except = method(sig.except = except)
-  sig.prototype.setup = method(sig.setup = setup)
   sig.prototype.teardown = method(sig.teardown = teardown)
   sig.prototype.map = method(sig.map = map)
   sig.prototype.filter = method(sig.filter = filter)
@@ -553,7 +547,6 @@
   sig.prototype.update = method(sig.update = update)
   sig.prototype.append = method(sig.append = append)
   sig.prototype.call = method(sig.call = call)
-  sig.prototype.emit = method(sig.emit = emit)
 
 
   if (typeof module != 'undefined')
