@@ -1,4 +1,4 @@
-m# sig
+# sig
 
 ![Build Status](https://api.travis-ci.org/justinvdm/sig.png)
 
