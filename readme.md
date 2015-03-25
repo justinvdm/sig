@@ -2,7 +2,6 @@
 
 ![Build Status](https://api.travis-ci.org/justinvdm/sig.png)
 
-
 high-level reactive-style programming in javascript
 
 ```javascript
@@ -17,6 +16,7 @@ s.put(1)  // 2
  .put(3)  // 5
 ```
 
+**note** sig is far from stable or usable at the moment, expect drastic changes and don't use it in a production environment.
 
 ## docs
 
