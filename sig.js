@@ -56,7 +56,6 @@
 
 
   sig.any = function(values) {
-    var out = sig()
     if (isArguments(values)) values = sig.slice(values)
 
     return sig(pairs(values))
