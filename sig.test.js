@@ -752,16 +752,16 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it("should kills its listeners when the out signal is killed", function() {
+    it("should disconnect its listeners when killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.any([a, b])
-      assert.equal(a.targets.length, 1)
-      assert.equal(b.targets.length, 1)
+      assert(!a.disconnected)
+      assert(!b.disconnected)
 
       s.kill()
-      assert(!a.targets.length)
-      assert(!b.targets.length)
+      assert(a.disconnected)
+      assert(b.disconnected)
     })
 
     it("should handle errors from its source signals", function() {
@@ -917,16 +917,16 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it("should kills its listeners when the out signal is killed", function() {
+    it("should disconnect its listeners when killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.all([a, b])
-      assert.equal(a.targets.length, 1)
-      assert.equal(b.targets.length, 1)
+      assert(!a.disconnected)
+      assert(!b.disconnected)
 
       s.kill()
-      assert(!a.targets.length)
-      assert(!b.targets.length)
+      assert(a.disconnected)
+      assert(b.disconnected)
     })
 
     it("should work with signals with non-empty buffers", function() {
@@ -1006,16 +1006,16 @@ describe("sig", function() {
       assert.deepEqual(results, [1, 2, 3, 4])
     })
 
-    it("should kills its listeners when the out signal is killed", function() {
+    it("should disconnect its listeners when killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.merge([a, b])
-      assert.equal(a.targets.length, 1)
-      assert.equal(b.targets.length, 1)
+      assert(!a.disconnected)
+      assert(!b.disconnected)
 
       s.kill()
-      assert(!a.targets.length)
-      assert(!b.targets.length)
+      assert(a.disconnected)
+      assert(b.disconnected)
     })
 
     it("should handle errors from its source signals", function() {
@@ -1306,7 +1306,7 @@ describe("sig", function() {
       s.raise(e)
     })
 
-    it("should not redirect after the target has killed", function() {
+    it("should not redirect after the target has been killed", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
