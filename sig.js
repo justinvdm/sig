@@ -326,7 +326,7 @@
   }
 
 
-  sig.prototype.appkill = function(fn) {
+  sig.prototype.append = function(fn) {
     var out = sig()
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
@@ -336,7 +336,7 @@
         if (sig.isSig(u)) u.redir(out)
         this.next()
       })
-      .redir(out)
+      .dependOn(out)
 
     return out
   }
@@ -563,7 +563,7 @@
   sig.then = sig.static(sig.prototype.then)
   sig.redir = sig.static(sig.prototype.redir)
   sig.update = sig.static(sig.prototype.update)
-  sig.appkill = sig.static(sig.prototype.appkill)
+  sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
 
 

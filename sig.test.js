@@ -1136,12 +1136,12 @@ describe("sig", function() {
   })
 
 
-  describe(".appkill", function() {
-    it("should appkill each returned signal", function() {
+  describe(".append", function() {
+    it("should append each returned signal", function() {
       var s = sig()
 
       var results = s
-        .appkill(function(u) {
+        .append(function(u) {
           return u.map(function(x) { return x * 2 })
         })
         .call(capture)
@@ -1171,7 +1171,7 @@ describe("sig", function() {
       var s = sig()
 
       var results = s
-        .appkill(sig.map, function(x) { return x * 2 })
+        .append(sig.map, function(x) { return x * 2 })
         .call(capture)
 
       var t = sig()
@@ -1193,7 +1193,7 @@ describe("sig", function() {
 
     it("should default to an identity function", function() {
       var s = sig()
-      var results = capture(s.appkill())
+      var results = capture(s.append())
 
       var t = sig()
       s.put(t)
@@ -1209,7 +1209,7 @@ describe("sig", function() {
       var s = sig()
 
       var results = s
-        .appkill(function(x) {
+        .append(function(x) {
           if (x % 2) return sig.val(x)
         })
         .call(capture)
