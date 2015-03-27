@@ -59,15 +59,12 @@
     var out = sig()
     if (isArguments(values)) values = sig.slice(values)
 
-    each(values, function(s, k) {
-      if (sig.isSig(s)) s.map(output, k).redir(out)
-    })
-    
-    return out
-
-    function output(v, k) {
-      return [v, k]
-    }
+    return sig(pairs(values))
+      .filter(sig.spread, sig.isSig)
+      .then(sig.spread, function(s, k) {
+        s.map(identityAll, k).redir(this)
+        this.next()
+      })
   }
 
 
@@ -327,9 +324,10 @@
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
     return this
-      .then(function(v) {
-        var u = fn(v)
-        if (sig.isSig(u)) u.redir(this)
+      .map(fn)
+      .filter(sig.isSig)
+      .then(function(s) {
+        s.redir(this)
         this.next()
       })
   }
@@ -493,6 +491,21 @@
   }
 
 
+  function each(obj, fn) {
+    if (Array.isArray(obj)) return obj.forEach(fn)
+    for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
+  }
+
+
+  function objMap(obj, fn) {
+    var results = []
+    each(obj, function(v, k) {
+      results.push(fn(v, k))
+    })
+    return results
+  }
+
+
   function deepEach(arr, fn) {
     fn = sig.prime(sig.slice(arguments, 2), fn)
     if (!isArray(arr)) return fn(arr)
@@ -502,9 +515,13 @@
   }
 
 
-  function each(obj, fn) {
-    if (Array.isArray(obj)) return obj.forEach(fn)
-    for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
+  function pairs(obj) {
+    return objMap(obj, identityAll)
+  }
+
+
+  function identityAll() {
+    return sig.slice(arguments)
   }
 
 
