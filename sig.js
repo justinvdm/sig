@@ -305,6 +305,7 @@
 
   sig.prototype.to = function(s) {
     s.put(this)
+    return this
   }
 
 
