@@ -584,6 +584,12 @@ describe("sig", function() {
         .call(capture, assert.deepEqual, [3, 5, 7, 9])
     })
 
+    it("should allow non-function values to be given", function() {
+      sig([1, 2, 3, 4])
+        .map(23)
+        .call(capture, assert.deepEqual, [23, 23, 23, 23])
+    })
+
     it("should allow additional args", function() {
       function fn(a, b, c) {
         return [a, b, c]
@@ -1367,5 +1373,18 @@ describe("sig", function() {
         done()
       }
     })
-  });
+  })
+
+
+  describe(".functor", function() {
+    it("should simply return a function if one is given", function() {
+      function foo(){}
+      assert.strictEqual(sig.functor(foo), foo)
+    })
+
+    it("should wrap non-functions", function() {
+      var obj = {}
+      assert.strictEqual(sig.functor(obj)(), obj)
+    })
+  })
 })

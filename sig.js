@@ -149,6 +149,13 @@
   }
 
 
+  sig.functor = function(v) {
+    return typeof v != 'function'
+      ? function() { return v }
+      : v
+  }
+
+
   sig.prototype.kill = function() {
     emit(this, 'kill')
     disconnect(this)
@@ -218,6 +225,7 @@
 
 
   sig.prototype.map = function(fn) {
+    fn = sig.functor(fn)
     fn = sig.prime(sig.slice(arguments, 1), fn)
 
     return this.then(function() {
