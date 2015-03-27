@@ -1294,7 +1294,7 @@ describe("sig", function() {
     it("should redirect signal errors", function(done) {
       var s = sig()
       var t = sig()
-      var e = new Error(':/') 
+      var e = new Error(':/')
 
       s.redir(t)
 
@@ -1368,15 +1368,4 @@ describe("sig", function() {
       }
     })
   });
-
-
-  describe(".method", function() {
-    it("should curry the this context", function() {
-      var meth = sig.method(function(a, b) {
-        return a + b
-      })
-
-      assert.equal(meth.call(23, 32), 55)
-    })
-  })
 })

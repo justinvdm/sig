@@ -8,7 +8,7 @@
 
 
   function sig(obj) {
-    if (isSig(obj)) return obj
+    if (sig.isSig(obj)) return obj
 
     var s = new Sig()
     s.targets = []
@@ -27,22 +27,319 @@
     s.disconnected = false
     s.eventListeners = {}
 
-    if (obj) putMany(s, obj)
+    if (obj) s.putMany(obj)
     return s
   }
 
 
-  function Sig() {}
-  Sig.prototype = sig.prototype
+  sig.val = function(v) {
+    var s = sig()
+    s.sticky = true
+    if (arguments.length) s.put(v)
+    return s
+  }
 
 
-  function putNextProcessor(x) {
-    putNext(this, x)
+  sig.ensure = function(v) {
+    return !sig.isSig(v)
+      ? sig([v])
+      : v
+  }
+
+
+  sig.ensureVal = function(v) {
+    return sig.isSig(v)
+      ? v.then(sig.val())
+      : sig.val(v)
+  }
+
+
+  sig.any = function(values) {
+    var out = sig()
+    if (isArguments(values)) values = sig.slice(values)
+
+    each(values, function(s, k) {
+      if (sig.isSig(s)) s.map(output, k).redir(out)
+    })
+    
+    return out
+
+    function output(v, k) {
+      return [v, k]
+    }
+  }
+
+
+  sig.all = function(values) {
+    var out = sig()
+    var remaining = {}
+    values = copy(values)
+
+    each(values, function(s, k) {
+      if (sig.isSig(s)) remaining[k] = true
+    })
+
+    if (!isEmpty(remaining))
+      each(values, function(s, k) {
+        if (sig.isSig(s)) s.then(output, k).redir(out)
+      })
+    else
+      out.put(values)
+
+    return out
+
+    function output(v, k) {
+      delete remaining[k]
+      values[k] = v
+      if (isEmpty(remaining)) this.put(copy(values))
+      this.next()
+    }
+  }
+
+
+  sig.merge = function(values) {
+    return sig.any(values)
+      .map(sig.spread, sig.identity)
+  }
+
+
+  sig.isSig = function(s) {
+    return s instanceof Sig
+  }
+
+
+  sig.spread = function(args, fn) {
+    return fn.apply(this, args)
+  }
+
+
+  sig.log = function() {
+    return _log.apply(console, arguments)
+  }
+
+
+  sig.prime = function(args, fn) {
+    if (!args.length) return fn
+
+    return function() {
+      return fn.apply(this, sig.slice(arguments).concat(args))
+    }
+  }
+
+
+  sig.slice = function(arr, a, b) {
+    return _slice.call(arr, a, b)
+  }
+
+
+  sig.identity = function(v) {
+    return v
+  }
+
+
+  sig.static = function(fn) {
+    return function(that) {
+      return fn.apply(that, sig.slice(arguments, 1))
+    }
+  }
+
+
+  sig.to = function(v, s) {
+    s.put(v)
+  }
+
+
+  sig.prototype.end = function() {
+    emit(this, 'end')
+    disconnect(this)
+    this.put(_end_)
+    this.ended = true
+    return this
+  }
+
+
+  sig.prototype.put = function(v) {
+    if (this.sticky) this.current = v
+    if (this.paused) buffer(this, v)
+    else send(this, v)
+    return this
+  }
+
+
+  sig.prototype.next = function() {
+    if (!this.inBuffer.length) this.waiting = true
+    else process(this, this.inBuffer.shift())
+    return this
+  }
+
+
+  sig.prototype.pause = function() {
+    this.paused = true
+    return this
+  }
+
+
+  sig.prototype.resume = function() {
+    this.paused = false
+    flush(this)
+    return this
+  }
+
+
+  sig.prototype.raise = function(e) {
+    if (!this.error) handleError(this, e)
+    else propogateError(this, e)
+    return this
+  }
+
+
+  sig.prototype.except = function(fn) {
+    var t = sig()
+    fn = sig.prime(sig.slice(arguments, 1), fn)
+    t.errorHandler = fn
+    this.then(t)
+    return t
+  }
+
+
+  sig.prototype.then = function(obj) {
+    return typeof obj == 'function'
+      ? thenFn(this, obj, sig.slice(arguments, 1))
+      : thenSig(this, obj)
+  }
+
+
+  sig.prototype.teardown = function(fn) {
+    fn = sig.prime(sig.slice(arguments, 1), fn)
+    if (this.ended) fn.call(this)
+    else on(this, 'end', fn)
+    return this
+  }
+
+
+  sig.prototype.map = function(fn) {
+    fn = sig.prime(sig.slice(arguments, 1), fn)
+
+    return this.then(function() {
+      this.put(fn.apply(this, arguments)).next()
+    })
+  }
+
+
+  sig.prototype.filter = function(fn) {
+    fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
+
+    return this.then(function(v) {
+      if (fn.apply(this, arguments)) this.put(v)
+      this.next()
+    })
+  }
+
+
+  sig.prototype.flatten = function() {
+    return this.then(function(v) {
+      deepEach(v, sig.to, this)
+      this.next()
+    })
+  }
+
+
+  sig.prototype.limit = function(n) {
+    var i = 0
+    
+    return this.then(function(v) {
+      if (++i <= n) this.put(v).next()
+      if (i >= n) this.end()
+    })
+  }
+
+
+  sig.prototype.once = function() {
+    return this.limit(1)
+  }
+
+
+  sig.prototype.redir = function(t) {
+    var u = this
+      .then(function(v) {
+        t.put(v)
+        this.next()
+      })
+      .except(function(e) {
+        t.raise(e)
+        this.next()
+      })
+
+    on(t, 'disconnect', disconnect, u)
+    return u
+  }
+
+
+  sig.prototype.resolve = function(v) {
+    this.put(v).end()
+    return this
+  }
+
+
+  sig.prototype.putMany = function(values) {
+    var n = values.length
+    var i = -1
+    while (++i < n) this.put(values[i])
+    return this
+  }
+
+
+  sig.prototype.to = function(s) {
+    s.put(this)
+  }
+
+
+  sig.prototype.update = function(fn) {
+    var curr
+    var out = sig()
+    fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
+
+    this
+      .then(function(v) {
+        if (curr) curr.end()
+        var u = fn(v)
+        if (sig.isSig(u)) curr = u.redir(out)
+        this.next()
+      })
+      .redir(out)
+
+    return out
+  }
+
+
+  sig.prototype.append = function(fn) {
+    var out = sig()
+    fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
+
+    this
+      .then(function(v) {
+        var u = fn(v)
+        if (sig.isSig(u)) u.redir(out)
+        this.next()
+      })
+      .redir(out)
+
+    return out
+  }
+
+
+  sig.prototype.call = function(fn) {
+    return fn.apply(this, [this].concat(sig.slice(arguments, 1)))
+  }
+
+
+  function putNextProcessor(v) {
+    this.put(v).next()
   }
 
 
   function raiseNextHandler(e) {
-    raiseNext(this, e)
+    this.raise(e).next()
   }
 
 
@@ -53,9 +350,8 @@
     addTarget(s, t)
 
     if (s.disconnected) reconnect(s)
-    if (s.eager && firstTarget) resume(s)
+    if (s.eager && firstTarget) s.resume()
     else if (s.sticky && s.current != _nil_) receive(t, s.current)
-    return s
   }
 
 
@@ -70,7 +366,6 @@
 
     t.disconnected = true
     emit(t, 'disconnect')
-    return t
   }
 
 
@@ -85,86 +380,52 @@
 
     t.disconnected = false
     emit(t, 'reconnect')
-
-    return t
   }
 
 
   function addTarget(s, t) {
     s.targets.push(t)
-    return s
   }
 
 
   function rmTarget(s, t) {
     rm(s.targets, t)
-    return s
   }
 
 
   function setSource(t, s) {
-    if (t.source) raise(t, new Error(
+    if (t.source) t.raise(new Error(
       "Cannot set signal's source, signal already has a source"))
     else t.source = s
-    return t
   }
 
 
-  function end(s) {
-    emit(s, 'end')
-    disconnect(s)
-    put(s, _end_)
-    s.ended = true
-    return s
+  function process(s, v) {
+    if (v == _end_) s.end()
+    else s.processor(v)
   }
 
 
-  function put(s, x) {
-    if (s.sticky) s.current = x
-    if (s.paused) buffer(s, x)
-    else send(s, x)
-    return s
-  }
-
-
-  function next(s) {
-    if (!s.inBuffer.length) s.waiting = true
-    else process(s, s.inBuffer.shift())
-    return s
-  }
-
-
-  function process(s, x) {
-    if (x == _end_) end(s)
-    else s.processor(x)
-    return s
-  }
-
-
-  function receive(s, x) {
-    s.inBuffer.push(x)
+  function receive(s, v) {
+    s.inBuffer.push(v)
 
     if (s.waiting) {
       s.waiting = false
-      next(s)
+      s.next()
     }
-
-    return s
   }
 
 
-  function send(s, x) {
-    var targets = slice(s.targets)
+  function send(s, v) {
+    var targets = sig.slice(s.targets)
     var i = -1
     var n = targets.length
-    while (++i < n) receive(targets[i], x)
-    return s
+    while (++i < n) receive(targets[i], v)
   }
 
 
-  function buffer(s, x) {
-    s.outBuffer.push(x)
-    return s
+  function buffer(s, v) {
+    s.outBuffer.push(v)
   }
 
 
@@ -174,27 +435,6 @@
     var n = buffer.length
     while (++i < n) send(s, buffer[i])
     s.outBuffer = []
-    return s
-  }
-
-
-  function pause(s) {
-    s.paused = true
-    return s
-  }
-
-
-  function resume(s) {
-    s.paused = false
-    flush(s)
-    return s
-  }
-
-
-  function raise(s, e) {
-    return !s.error
-      ? handleError(s, e)
-      : propogateError(s, e)
   }
 
 
@@ -202,7 +442,6 @@
     s.error = e
     try { s.errorHandler.call(s, e) }
     finally { s.error = null }
-    return s
   }
 
 
@@ -212,30 +451,15 @@
     if (!n) throw e
 
     var i = -1
-    while (++i < n) raise(targets[i], e)
-    return s
+    while (++i < n) targets[i].raise(e)
   }
 
 
-  function except(s, fn) {
+  function thenFn(s, fn, args) {
     var t = sig()
-    t.errorHandler = prime(slice(arguments, 2), fn)
-    then(s, t)
+    t.processor = sig.prime(args, fn)
+    thenSig(s, t)
     return t
-  }
-
-
-  function then(s, obj) {
-    return typeof obj == 'function'
-      ? thenFn.apply(this, arguments)
-      : thenSig.apply(this, arguments)
-  }
-
-
-  function thenFn(s, fn) {
-    var t = sig()
-    t.processor = prime(slice(arguments, 2), fn)
-    return thenSig(s, t)
   }
 
 
@@ -246,259 +470,28 @@
 
 
   function on(s, event, fn) {
-    fn = prime(slice(arguments, 3), fn)
+    fn = sig.prime(sig.slice(arguments, 3), fn)
     var listeners = s.eventListeners[event] || []
     s.eventListeners[event] = listeners
     listeners.push(fn)
-    return s
   }
 
 
   function emit(s, event) {
-    var args = slice(arguments, 2)
-    var listeners = slice(s.eventListeners[event] || [])
+    var args = sig.slice(arguments, 2)
+    var listeners = sig.slice(s.eventListeners[event] || [])
     var n = listeners.length
     var i = -1
     while (++ i < n) listeners[i].apply(s, args)
-    return s
-  }
-
-
-  function teardown(s, fn) {
-    fn = prime(slice(arguments, 2), fn)
-    if (s.ended) fn.call(s)
-    else on(s, 'end', fn)
-    return s
-  }
-
-
-  function val(x) {
-    var s = sig()
-    s.sticky = true
-    if (arguments.length) put(s, x)
-    return s
-  }
-
-
-  function ensureVal(v) {
-    return isSig(v)
-      ? then(v, val())
-      : val(v)
-  }
-
-
-  function map(s, fn) {
-    fn = prime(slice(arguments, 2), fn)
-
-    return then(s, function() {
-      putNext(this, fn.apply(this, arguments))
-    })
-  }
-
-
-  function filter(s, fn) {
-    fn = prime(slice(arguments, 2), fn || identity)
-
-    return then(s, function(x) {
-      if (fn.apply(this, arguments)) put(this, x)
-      next(this)
-    })
-  }
-
-
-  function flatten(s) {
-    return then(s, function(x) {
-      deepEach(x, to, this)
-      next(this)
-    })
   }
 
 
   function deepEach(arr, fn) {
-    fn = prime(slice(arguments, 2), fn)
+    fn = sig.prime(sig.slice(arguments, 2), fn)
     if (!isArray(arr)) return fn(arr)
     var i = -1
     var n = arr.length
     while (++i < n) deepEach(arr[i], fn)
-  }
-
-
-  function limit(s, n) {
-    var i = 0
-    
-    return then(s, function(x) {
-      if (++i <= n) putNext(this, x)
-      if (i >= n) end(this)
-    })
-  }
-
-
-  function once(s) {
-    return limit(s, 1)
-  }
-
-
-  function ensure(v) {
-    return !isSig(v)
-      ? sig([v])
-      : v
-  }
-
-
-  function redir(s, t) {
-    var u
-
-    u = then(s, function(v) {
-      put(t, v)
-      next(this)
-    })
-
-    u = except(u, function(e) {
-      raise(t, e)
-      next(this)
-    })
-
-    on(t, 'disconnect', disconnect, u)
-    return u
-  }
-
-
-  function resolve(s, v) {
-    put(s, v)
-    end(s)
-    return s
-  }
-
-
-  function putNext(s, v) {
-    put(s, v)
-    next(s)
-  }
-
-
-  function raiseNext(s, e) {
-    raise(s, e)
-    next(s)
-  }
-
-
-  function putMany(s, values) {
-    var n = values.length
-    var i = -1
-    while (++i < n) put(s, values[i])
-    return s
-  }
-
-
-  function to(v, s) {
-    put(s, v)
-  }
-
-
-  function any(values) {
-    var out = sig()
-    if (isArguments(values)) values = slice(values)
-
-    each(values, function(s, k) {
-      if (isSig(s)) redir(map(s, output, k), out)
-    })
-    
-    return out
-
-    function output(v, k) {
-      return [v, k]
-    }
-  }
-
-
-  function all(values) {
-    var out = sig()
-    var remaining = {}
-    values = copy(values)
-
-    each(values, function(s, k) {
-      if (isSig(s)) remaining[k] = true
-    })
-
-    if (isEmpty(remaining)) put(out, values)
-    else each(values, function(s, k) {
-      if (isSig(s)) redir(then(s, output, k), out)
-    })
-
-    return out
-
-    function output(x, k) {
-      delete remaining[k]
-      values[k] = x
-      if (isEmpty(remaining)) put(this, copy(values))
-      next(this)
-    }
-  }
-
-
-  function merge(values) {
-    return map(any(values), spread, identity)
-  }
-
-
-  function update(s, fn) {
-    var curr
-    var out = sig()
-    fn = prime(slice(arguments, 2), fn || identity)
-
-    var t = then(s, function(x) {
-      if (curr) end(curr)
-      var u = fn(x)
-      if (isSig(u)) curr = redir(u, out)
-      next(this)
-    })
-
-    redir(t, out)
-    return out
-  }
-
-
-  function append(s, fn) {
-    var out = sig()
-    fn = prime(slice(arguments, 2), fn || identity)
-
-    var t = then(s, function(x) {
-      var u = fn(x)
-      if (isSig(u)) redir(u, out)
-      next(this)
-    })
-
-    redir(t, out)
-    return out
-  }
-
-
-  function isSig(s) {
-    return s instanceof Sig
-  }
-
-
-  function spread(args, fn) {
-    return fn.apply(this, args)
-  }
-
-
-  function log() {
-    return _log.apply(console, arguments)
-  }
-
-
-  function call(s, fn) {
-    return fn.apply(s, [s].concat(slice(arguments, 2)))
-  }
-
-
-  function prime(args, fn) {
-    if (!args.length) return fn
-
-    return function() {
-      return fn.apply(this, slice(arguments).concat(args))
-    }
   }
 
 
@@ -516,22 +509,17 @@
 
 
   function copy(obj) {
-    if (isArray(obj) || isArguments(obj)) return slice(obj)
+    if (isArray(obj) || isArguments(obj)) return sig.slice(obj)
     var result = {}
     for (var k in obj) if (obj.hasOwnProperty(k)) result[k] = obj[k]
     return result
   }
 
 
-  function rm(arr, x) {
-    var i = arr.indexOf(x)
+  function rm(arr, v) {
+    var i = arr.indexOf(v)
     if (i < 0) return
     arr.splice(i, 1)
-  }
-
-
-  function slice(arr, a, b) {
-    return _slice.call(arr, a, b)
   }
 
 
@@ -542,58 +530,31 @@
   }
 
 
-  function identity(x) {
-    return x
-  }
+  sig.put = sig.static(sig.prototype.put)
+  sig.next = sig.static(sig.prototype.next)
+  sig.end = sig.static(sig.prototype.end)
+  sig.resolve = sig.static(sig.prototype.resolve)
+  sig.putMany = sig.static(sig.prototype.putMany)
+  sig.receive = sig.static(sig.prototype.receive)
+  sig.pause = sig.static(sig.prototype.pause)
+  sig.resume = sig.static(sig.prototype.resume)
+  sig.raise = sig.static(sig.prototype.raise)
+  sig.except = sig.static(sig.prototype.except)
+  sig.teardown = sig.static(sig.prototype.teardown)
+  sig.map = sig.static(sig.prototype.map)
+  sig.filter = sig.static(sig.prototype.filter)
+  sig.flatten = sig.static(sig.prototype.flatten)
+  sig.limit = sig.static(sig.prototype.limit)
+  sig.once = sig.static(sig.prototype.once)
+  sig.then = sig.static(sig.prototype.then)
+  sig.redir = sig.static(sig.prototype.redir)
+  sig.update = sig.static(sig.prototype.update)
+  sig.append = sig.static(sig.prototype.append)
+  sig.call = sig.static(sig.prototype.call)
 
 
-  function method(fn) {
-    return function() {
-      return fn.apply(this, [this].concat(slice(arguments)))
-    }
-  }
-
-
-  sig.val = val
-  sig.log = log
-  sig.method = method
-  sig.any = any
-  sig.all = all
-  sig.merge = merge
-  sig.spread = spread
-  sig.isSig = isSig
-  sig.ensure = ensure
-  sig.ensureVal = ensureVal
-  sig.slice = slice
-  sig.prime = prime
-  sig.identity = identity
-
-
-  sig.prototype.disconnect = method(sig.disconnect = disconnect)
-  sig.prototype.reconnect = method(sig.reconnect = reconnect)
-  sig.prototype.put = method(sig.put = put)
-  sig.prototype.to = method(sig.to = to)
-  sig.prototype.next = method(sig.next = next)
-  sig.prototype.end = method(sig.end = end)
-  sig.prototype.resolve = method(sig.resolve = resolve)
-  sig.prototype.putMany = method(sig.putMany = putMany)
-  sig.prototype.putNext = method(sig.putNext = putNext)
-  sig.prototype.receive = method(sig.receive = receive)
-  sig.prototype.pause = method(sig.pause = pause)
-  sig.prototype.resume = method(sig.resume = resume)
-  sig.prototype.raise = method(sig.raise = raise)
-  sig.prototype.except = method(sig.except = except)
-  sig.prototype.teardown = method(sig.teardown = teardown)
-  sig.prototype.map = method(sig.map = map)
-  sig.prototype.filter = method(sig.filter = filter)
-  sig.prototype.flatten = method(sig.flatten = flatten)
-  sig.prototype.limit = method(sig.limit = limit)
-  sig.prototype.once = method(sig.once = once)
-  sig.prototype.then = method(sig.then = then)
-  sig.prototype.redir = method(sig.redir = redir)
-  sig.prototype.update = method(sig.update = update)
-  sig.prototype.append = method(sig.append = append)
-  sig.prototype.call = method(sig.call = call)
+  function Sig() {}
+  Sig.prototype = sig.prototype
 
 
   if (typeof module != 'undefined')
