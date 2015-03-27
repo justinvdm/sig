@@ -1282,6 +1282,26 @@ describe("sig", function() {
     })
   })
 
+  describe(".dependOn", function() {
+    it("should set the signal as a dependant", function() {
+      var a = sig()
+      var b = sig()
+      assert(!b.isDependant)
+      b.dependOn(a)
+      assert(b.isDependant)
+    })
+
+    it("should disconnect the signal with the target disconnects", function() {
+      var a = sig()
+      var b = sig()
+      b.dependOn(a)
+
+      assert(!b.disconnected)
+      a.kill()
+      assert(b.disconnected)
+    })
+  })
+
   describe(".redir", function() {
     it("should redirect signal output", function() {
       var s = sig()
@@ -1351,7 +1371,7 @@ describe("sig", function() {
     it("should put the given value, then kill", function() {
       var killed = false
 
-      var s = sig()
+      sig()
         .teardown(function() { killed = true })
         .resolve(23)
         .call(capture, assert.deepEqual, [23])

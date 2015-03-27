@@ -13,19 +13,20 @@
     var s = new Sig()
     s.targets = []
     s.source = null
-    s.eager = true
-    s.sticky = false
     s.processor = putNextProcessor
     s.errorHandler = raiseNextHandler
-    s.paused = true
     s.current = _nil_
     s.inBuffer = []
     s.outBuffer = []
     s.error = null
+    s.eventListeners = {}
+    s.eager = true
+    s.sticky = false
     s.waiting = true
     s.killed = false
+    s.paused = true
     s.disconnected = false
-    s.eventListeners = {}
+    s.isDependant = false
 
     if (obj) s.putMany(obj)
     return s
@@ -168,7 +169,7 @@
   sig.prototype.put = function(v) {
     if (this.sticky) this.current = v
     if (this.paused) buffer(this, v)
-    else skill(this, v)
+    else send(this, v)
     return this
   }
 
@@ -267,8 +268,15 @@
   }
 
 
+  sig.prototype.dependOn = function(t) {
+    this.isDependant = true
+    on(t, 'disconnect', disconnect, this)
+    return this
+  }
+
+
   sig.prototype.redir = function(t) {
-    var u = this
+    return this
       .then(function(v) {
         t.put(v)
         this.next()
@@ -277,9 +285,7 @@
         t.raise(e)
         this.next()
       })
-
-    on(t, 'disconnect', disconnect, u)
-    return u
+      .dependOn(t)
   }
 
 
@@ -424,7 +430,7 @@
   }
 
 
-  function skill(s, v) {
+  function send(s, v) {
     var targets = sig.slice(s.targets)
     var i = -1
     var n = targets.length
@@ -441,7 +447,7 @@
     var buffer = s.outBuffer
     var i = -1
     var n = buffer.length
-    while (++i < n) skill(s, buffer[i])
+    while (++i < n) send(s, buffer[i])
     s.outBuffer = []
   }
 
