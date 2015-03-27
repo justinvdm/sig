@@ -15,16 +15,19 @@
     s.source = null
     s.eager = true
     s.sticky = false
-    s.receiver = putReceiver
-    s.errorHandler = raiseHandler
+    s.processor = putNextProcessor
+    s.errorHandler = raiseNextHandler
     s.paused = true
     s.current = _nil_
-    s.buffer = []
+    s.inBuffer = []
+    s.outBuffer = []
     s.error = null
+    s.waiting = true
+    s.ended = false
     s.disconnected = false
     s.eventListeners = {}
 
-    if (arguments.length) putMany(s, obj)
+    if (obj) putMany(s, obj)
     return s
   }
 
@@ -33,13 +36,13 @@
   Sig.prototype = sig.prototype
 
 
-  function putReceiver(x) {
-    put(this, x)
+  function putNextProcessor(x) {
+    putNext(this, x)
   }
 
 
-  function raiseHandler(e) {
-    raise(this, e)
+  function raiseNextHandler(e) {
+    raiseNext(this, e)
   }
 
 
@@ -111,29 +114,66 @@
     emit(s, 'end')
     disconnect(s)
     put(s, _end_)
+    s.ended = true
     return s
   }
 
 
   function put(s, x) {
-    s.current = x
+    if (s.sticky) s.current = x
     if (s.paused) buffer(s, x)
     else send(s, x)
     return s
   }
 
 
-  function putMany(s, values) {
-    var n = values.length
-    var i = -1
-    while (++i < n) put(s, values[i])
+  function next(s) {
+    if (!s.inBuffer.length) s.waiting = true
+    else process(s, s.inBuffer.shift())
+    return s
+  }
+
+
+  function process(s, x) {
+    if (x == _end_) end(s)
+    else s.processor(x)
     return s
   }
 
 
   function receive(s, x) {
-    if (x == _end_) end(s)
-    else s.receiver.call(s, x)
+    s.inBuffer.push(x)
+
+    if (s.waiting) {
+      s.waiting = false
+      next(s)
+    }
+
+    return s
+  }
+
+
+  function send(s, x) {
+    var targets = slice(s.targets)
+    var i = -1
+    var n = targets.length
+    while (++i < n) receive(targets[i], x)
+    return s
+  }
+
+
+  function buffer(s, x) {
+    s.outBuffer.push(x)
+    return s
+  }
+
+
+  function flush(s) {
+    var buffer = s.outBuffer
+    var i = -1
+    var n = buffer.length
+    while (++i < n) send(s, buffer[i])
+    s.outBuffer = []
     return s
   }
 
@@ -185,31 +225,6 @@
   }
 
 
-  function flush(s) {
-    var buffer = s.buffer
-    var i = -1
-    var n = buffer.length
-    while (++i < n) send(s, buffer[i])
-    s.buffer = []
-    return s
-  }
-
-
-  function send(s, x) {
-    var targets = slice(s.targets)
-    var i = -1
-    var n = targets.length
-    while (++i < n) receive(targets[i], x)
-    return s
-  }
-
-
-  function buffer(s, x) {
-    s.buffer.push(x)
-    return s
-  }
-
-
   function then(s, obj) {
     return typeof obj == 'function'
       ? thenFn.apply(this, arguments)
@@ -219,7 +234,7 @@
 
   function thenFn(s, fn) {
     var t = sig()
-    t.receiver = prime(slice(arguments, 2), fn)
+    t.processor = prime(slice(arguments, 2), fn)
     return thenSig(s, t)
   }
 
@@ -251,7 +266,8 @@
 
   function teardown(s, fn) {
     fn = prime(slice(arguments, 2), fn)
-    on(s, 'end', fn)
+    if (s.ended) fn.call(s)
+    else on(s, 'end', fn)
     return s
   }
 
@@ -272,24 +288,28 @@
 
 
   function map(s, fn) {
-    return then(s, prime(slice(arguments, 2), function() {
-      put(this, fn.apply(this, arguments))
-    }))
+    fn = prime(slice(arguments, 2), fn)
+
+    return then(s, function() {
+      putNext(this, fn.apply(this, arguments))
+    })
   }
 
 
   function filter(s, fn) {
-    fn = fn || identity
+    fn = prime(slice(arguments, 2), fn || identity)
 
-    return then(s, prime(slice(arguments, 2), function(x) {
+    return then(s, function(x) {
       if (fn.apply(this, arguments)) put(this, x)
-    }))
+      next(this)
+    })
   }
 
 
   function flatten(s) {
     return then(s, function(x) {
       deepEach(x, to, this)
+      next(this)
     })
   }
 
@@ -307,7 +327,7 @@
     var i = 0
     
     return then(s, function(x) {
-      if (++i <= n) put(this, x)
+      if (++i <= n) putNext(this, x)
       if (i >= n) end(this)
     })
   }
@@ -327,25 +347,51 @@
 
   function redir(s, t) {
     var u
-    u = then(s, to, t)
-    u = except(u, raiseTo, t)
+
+    u = then(s, function(v) {
+      put(t, v)
+      next(this)
+    })
+
+    u = except(u, function(e) {
+      raise(t, e)
+      next(this)
+    })
+
     on(t, 'disconnect', disconnect, u)
     return u
   }
 
 
-  function resolve(s) {
-    return put(s, null)
+  function resolve(s, v) {
+    put(s, v)
+    end(s)
+    return s
   }
 
 
-  function to(x, s) {
-    put(s, x)
+  function putNext(s, v) {
+    put(s, v)
+    next(s)
   }
 
 
-  function raiseTo(e, s) {
+  function raiseNext(s, e) {
     raise(s, e)
+    next(s)
+  }
+
+
+  function putMany(s, values) {
+    var n = values.length
+    var i = -1
+    while (++i < n) put(s, values[i])
+    return s
+  }
+
+
+  function to(v, s) {
+    put(s, v)
   }
 
 
@@ -354,14 +400,13 @@
     if (isArguments(values)) values = slice(values)
 
     each(values, function(s, k) {
-      if (!isSig(s)) return
-      redir(map(s, next, k), out)
+      if (isSig(s)) redir(map(s, output, k), out)
     })
     
     return out
 
-    function next(x, k) {
-      return [x, k]
+    function output(v, k) {
+      return [v, k]
     }
   }
 
@@ -372,22 +417,21 @@
     values = copy(values)
 
     each(values, function(s, k) {
-      if (!isSig(s)) return
-      remaining[k] = true
+      if (isSig(s)) remaining[k] = true
     })
 
     if (isEmpty(remaining)) put(out, values)
     else each(values, function(s, k) {
-      if (!isSig(s)) return
-      redir(then(s, next, k), out)
+      if (isSig(s)) redir(then(s, output, k), out)
     })
 
     return out
 
-    function next(x, k) {
+    function output(x, k) {
       delete remaining[k]
       values[k] = x
       if (isEmpty(remaining)) put(this, copy(values))
+      next(this)
     }
   }
 
@@ -404,11 +448,9 @@
 
     var t = then(s, function(x) {
       if (curr) end(curr)
-
       var u = fn(x)
-      if (!isSig(u)) return
-
-      curr = redir(u, out)
+      if (isSig(u)) curr = redir(u, out)
+      next(this)
     })
 
     redir(t, out)
@@ -423,6 +465,7 @@
     var t = then(s, function(x) {
       var u = fn(x)
       if (isSig(u)) redir(u, out)
+      next(this)
     })
 
     redir(t, out)
@@ -521,16 +564,20 @@
   sig.isSig = isSig
   sig.ensure = ensure
   sig.ensureVal = ensureVal
+  sig.slice = slice
   sig.prime = prime
+  sig.identity = identity
 
 
-  sig.prototype.end = method(sig.end = end)
   sig.prototype.disconnect = method(sig.disconnect = disconnect)
   sig.prototype.reconnect = method(sig.reconnect = reconnect)
   sig.prototype.put = method(sig.put = put)
   sig.prototype.to = method(sig.to = to)
+  sig.prototype.next = method(sig.next = next)
+  sig.prototype.end = method(sig.end = end)
   sig.prototype.resolve = method(sig.resolve = resolve)
   sig.prototype.putMany = method(sig.putMany = putMany)
+  sig.prototype.putNext = method(sig.putNext = putNext)
   sig.prototype.receive = method(sig.receive = receive)
   sig.prototype.pause = method(sig.pause = pause)
   sig.prototype.resume = method(sig.resume = resume)

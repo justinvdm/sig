@@ -2,22 +2,16 @@ var sig = require('./sig'),
     assert = require('assert')
 
 
-function sink(s, fn) {
-  var values = []
+function capture(s, fn) {
+  var results = []
+  fn = sig.prime(sig.slice(arguments, 2), fn || sig.identity)
 
-  return s
-    .then(function(x) { values.push(x) })
-    .put(values)
-}
+  s.then(function(v) {
+    results.push(v)
+    this.next()
+  })
 
-
-function capture(s) {
-  var result
-
-  s.call(sink)
-   .then(function(v) { result = v })
-
-  return result
+  return fn(results)
 }
 
 
@@ -29,12 +23,14 @@ describe("sig", function() {
     src
       .then(function(x) {
         if (x % 2) this.put(x)
+        this.next()
       })
       .then(function(x) {
-        this.put(x + 1)
+        this.put(x + 1).next()
       })
       .then(function(x) {
         results.push(x)
+        this.next()
       })
 
     assert(!results.length)
@@ -308,12 +304,12 @@ describe("sig", function() {
     assert.strictEqual(s4Err, e1)
   })
 
-  it("should catch and raise errors raised in receivers", function(done) {
+  it("should catch and raise errors raised in processors", function(done) {
     var s = sig()
     var t = sig()
     var e = new Error('o_O')
 
-    t.receiver = function() {
+    t.processor = function() {
       t.raise(e)
     }
 
@@ -331,7 +327,11 @@ describe("sig", function() {
     var s = sig()
     var t = sig()
     var u = sig()
-    u.receiver = function(x) { results.push(x) }
+
+    u.processor = function(v) {
+      results.push(v)
+      this.next()
+    }
 
     s.then(t)
      .then(u)
@@ -383,12 +383,18 @@ describe("sig", function() {
     var results1 = []
     var results2 = []
     var s = sig()
-
     var t1 = sig()
-    t1.receiver = function(x) { results1.push(x) }
-
     var t2 = sig()
-    t2.receiver = function(x) { results2.push(x) }
+
+    t1.processor = function(x) {
+      results1.push(x)
+      this.next()
+    }
+
+    t2.processor = function(x) {
+      results2.push(x)
+      this.next()
+    }
 
     s.then(t1)
     s.then(t2)
@@ -465,12 +471,10 @@ describe("sig", function() {
 
   it("should create a signal from an array of values", function() {
     sig([23])
-      .call(sink)
-      .then(assert.deepEqual, [23])
+      .call(capture, assert.deepEqual, [23])
 
     sig([1, 2, 3, 4])
-      .call(sink)
-      .then(assert.deepEqual, [1, 2, 3, 4])
+      .call(capture, assert.deepEqual, [1, 2, 3, 4])
   })
 
 
@@ -505,11 +509,11 @@ describe("sig", function() {
 
     it("should support creating and connecting to a new target", function() {
       var s = sig()
-      var t = s.then(receiver)
+      var t = s.then(processor)
       assert.deepEqual(s.targets, [t])
       assert.strictEqual(t.source, s)
-      assert.strictEqual(t.receiver, receiver)
-      function receiver() {}
+      assert.strictEqual(t.processor, processor)
+      function processor() {}
     })
 
     it("should allow extra arguments to be given", function(done) {
@@ -577,8 +581,7 @@ describe("sig", function() {
       sig([1, 2, 3, 4])
         .map(function(x) { return x * 2 })
         .map(function(x) { return x + 1 })
-        .call(sink)
-        .then(assert.deepEqual, [3, 5, 7, 9])
+        .call(capture, assert.deepEqual, [3, 5, 7, 9])
     })
 
     it("should allow additional args", function() {
@@ -586,10 +589,9 @@ describe("sig", function() {
         return [a, b, c]
       }
 
-      sig([1, 2, 3, 4])
+      return sig([1, 2, 3, 4])
         .map(fn, 23, 32)
-        .call(sink)
-        .then(assert.deepEqual, [
+        .call(capture, assert.deepEqual, [
           [1, 23, 32],
           [2, 23, 32],
           [3, 23, 32],
@@ -604,8 +606,7 @@ describe("sig", function() {
       sig([2, 3, 4, 5, 6, 11, 12, 15, 16])
         .filter(function(x) { return x % 2 })
         .filter(function(x) { return x < 10 })
-        .call(sink)
-        .then(assert.deepEqual, [3, 5])
+        .call(capture, assert.deepEqual, [3, 5])
     })
 
     it("should allow additional args", function() {
@@ -615,15 +616,13 @@ describe("sig", function() {
 
       sig([1, 2, 3, 4])
         .filter(fn, 3, 2)
-        .call(sink)
-        .then(assert.deepEqual, [1, 3])
+        .call(capture, assert.deepEqual, [1, 3])
     })
 
     it("should default to an identity function", function() {
       sig([1, 0, 3, null])
         .filter()
-        .call(sink)
-        .then(assert.deepEqual, [1, 3])
+        .call(capture, assert.deepEqual, [1, 3])
     })
   })
 
@@ -632,8 +631,7 @@ describe("sig", function() {
     it("should flatten the given signal", function() {
       sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
         .flatten()
-        .call(sink)
-        .then(assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        .call(capture, assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     })
   })
 
@@ -642,8 +640,7 @@ describe("sig", function() {
     it("should limit the given signal", function() {
       sig([1, 2, 3, 4, 5, 6])
         .limit(3)
-        .call(sink)
-        .then(assert.deepEqual, [1, 2, 3])
+        .call(capture, assert.deepEqual, [1, 2, 3])
     })
 
     it("should end the signal chain once the limit is reached", function() {
@@ -665,8 +662,7 @@ describe("sig", function() {
     it("should not output anything if the limit is 0", function() {
       sig([1, 2, 3, 4, 5, 6])
         .limit(0)
-        .call(sink)
-        .then(assert.deepEqual, [])
+        .call(capture, assert.deepEqual, [])
     })
   })
 
@@ -675,8 +671,7 @@ describe("sig", function() {
     it("should limit a signal to its first output", function() {
       sig([1, 2, 3, 4, 5, 6])
         .once()
-        .call(sink)
-        .then(assert.deepEqual, [1])
+        .call(capture, assert.deepEqual, [1])
     })
 
     it("should end the signal chain after outputting a value", function() {
@@ -790,8 +785,7 @@ describe("sig", function() {
     it("should support argument objects", function() {
       function test() {
         sig.any(arguments)
-          .call(sink)
-          .then(assert.deepEqual, [[1, 0], [2, 1]])
+          .call(capture, assert.deepEqual, [[1, 0], [2, 1]])
       }
 
       test(sig.ensure(1), sig.ensure(2))
@@ -802,8 +796,7 @@ describe("sig", function() {
   describe(".all", function() {
     it("should support arrays with only non signals", function() {
       sig.all([21, 22, 23])
-       .call(sink)
-       .then(assert.deepEqual, [[21, 22, 23]])
+       .call(capture, assert.deepEqual, [[21, 22, 23]])
     })
 
     it("should support objects with only non signals", function() {
@@ -812,8 +805,7 @@ describe("sig", function() {
            b: 22,
            c: 23
         })
-        .call(sink)
-        .then(assert.deepEqual, [{
+        .call(capture, assert.deepEqual, [{
             a: 21,
             b: 22,
             c: 23
@@ -945,8 +937,7 @@ describe("sig", function() {
       b.put(2)
 
       sig.all([a, b])
-        .call(sink)
-        .then(assert.deepEqual, [[1, 2]])
+        .call(capture, assert.deepEqual, [[1, 2]])
     })
 
     it("should handle errors from its source signals", function() {
@@ -1048,8 +1039,7 @@ describe("sig", function() {
     it("should support argument objects", function() {
       function test() {
         sig.merge(arguments)
-          .call(sink)
-          .then(assert.deepEqual, [1, 2])
+          .call(capture, assert.deepEqual, [1, 2])
       }
 
       test(sig.ensure(1), sig.ensure(2))
@@ -1232,18 +1222,15 @@ describe("sig", function() {
   describe(".ensure", function() {
     it("should simply pass through existing signals", function() {
       sig.ensure(sig([1, 2]))
-        .call(sink)
-        .then(assert.deepEqual, [1, 2])
+        .call(capture, assert.deepEqual, [1, 2])
     })
 
     it("should create a singleton signal from non-signals", function() {
       sig.ensure(23)
-        .call(sink)
-        .then(assert.deepEqual, [23])
+        .call(capture, assert.deepEqual, [23])
 
       sig.ensure([[1, 2], [3, 4]])
-        .call(sink)
-        .then(assert.deepEqual, [[[1, 2], [3, 4]]])
+        .call(capture, assert.deepEqual, [[[1, 2], [3, 4]]])
     })
   })
 
@@ -1279,18 +1266,13 @@ describe("sig", function() {
   describe(".ensureVal", function() {
     it("should turn values into sticky signals", function() {
       sig.ensureVal(23)
-        .call(sink)
-        .then(assert.deepEqual, [23])
+        .call(capture, assert.deepEqual, [23])
     })
 
     it("should turn signals into sticky signals", function() {
       var s = sig.ensureVal(sig([23]))
-
-      s.call(sink)
-       .then(assert.deepEqual, [23])
-
-      s.call(sink)
-       .then(assert.deepEqual, [23])
+      s.call(capture, assert.deepEqual, [23])
+      s.call(capture, assert.deepEqual, [23])
     })
   })
 
@@ -1360,12 +1342,15 @@ describe("sig", function() {
 
 
   describe(".resolve", function() {
-    it("should put nulls", function() {
-      sig()
-        .resolve()
-        .resolve()
-        .call(sink)
-        .then(assert.deepEqual, [null, null])
+    it("should put the given value, then end", function() {
+      var ended = false
+
+      var s = sig()
+        .teardown(function() { ended = true })
+        .resolve(23)
+        .call(capture, assert.deepEqual, [23])
+
+      assert(ended)
     })
   })
 
