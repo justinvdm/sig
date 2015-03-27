@@ -1,6 +1,6 @@
 ;(function() {
   var _nil_ = {}
-  var _end_ = {}
+  var _kill_ = {}
 
   var isArray = Array.isArray
   var _slice = Array.prototype.slice
@@ -23,7 +23,7 @@
     s.outBuffer = []
     s.error = null
     s.waiting = true
-    s.ended = false
+    s.killed = false
     s.disconnected = false
     s.eventListeners = {}
 
@@ -149,11 +149,11 @@
   }
 
 
-  sig.prototype.end = function() {
-    emit(this, 'end')
+  sig.prototype.kill = function() {
+    emit(this, 'kill')
     disconnect(this)
-    this.put(_end_)
-    this.ended = true
+    this.put(_kill_)
+    this.killed = true
     return this
   }
 
@@ -161,7 +161,7 @@
   sig.prototype.put = function(v) {
     if (this.sticky) this.current = v
     if (this.paused) buffer(this, v)
-    else send(this, v)
+    else skill(this, v)
     return this
   }
 
@@ -211,8 +211,8 @@
 
   sig.prototype.teardown = function(fn) {
     fn = sig.prime(sig.slice(arguments, 1), fn)
-    if (this.ended) fn.call(this)
-    else on(this, 'end', fn)
+    if (this.killed) fn.call(this)
+    else on(this, 'kill', fn)
     return this
   }
 
@@ -249,7 +249,7 @@
     
     return this.then(function(v) {
       if (++i <= n) this.put(v).next()
-      if (i >= n) this.end()
+      if (i >= n) this.kill()
     })
   }
 
@@ -276,7 +276,7 @@
 
 
   sig.prototype.resolve = function(v) {
-    this.put(v).end()
+    this.put(v).kill()
     return this
   }
 
@@ -301,7 +301,7 @@
 
     this
       .then(function(v) {
-        if (curr) curr.end()
+        if (curr) curr.kill()
         var u = fn(v)
         if (sig.isSig(u)) curr = u.redir(out)
         this.next()
@@ -312,7 +312,7 @@
   }
 
 
-  sig.prototype.append = function(fn) {
+  sig.prototype.appkill = function(fn) {
     var out = sig()
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
@@ -401,7 +401,7 @@
 
 
   function process(s, v) {
-    if (v == _end_) s.end()
+    if (v == _kill_) s.kill()
     else s.processor(v)
   }
 
@@ -416,7 +416,7 @@
   }
 
 
-  function send(s, v) {
+  function skill(s, v) {
     var targets = sig.slice(s.targets)
     var i = -1
     var n = targets.length
@@ -433,7 +433,7 @@
     var buffer = s.outBuffer
     var i = -1
     var n = buffer.length
-    while (++i < n) send(s, buffer[i])
+    while (++i < n) skill(s, buffer[i])
     s.outBuffer = []
   }
 
@@ -532,7 +532,7 @@
 
   sig.put = sig.static(sig.prototype.put)
   sig.next = sig.static(sig.prototype.next)
-  sig.end = sig.static(sig.prototype.end)
+  sig.kill = sig.static(sig.prototype.kill)
   sig.resolve = sig.static(sig.prototype.resolve)
   sig.putMany = sig.static(sig.prototype.putMany)
   sig.receive = sig.static(sig.prototype.receive)
@@ -549,7 +549,7 @@
   sig.then = sig.static(sig.prototype.then)
   sig.redir = sig.static(sig.prototype.redir)
   sig.update = sig.static(sig.prototype.update)
-  sig.append = sig.static(sig.prototype.append)
+  sig.appkill = sig.static(sig.prototype.appkill)
   sig.call = sig.static(sig.prototype.call)
 
 

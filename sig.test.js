@@ -73,7 +73,7 @@ describe("sig", function() {
     assert.strictEqual(c.source, b)
     assert.strictEqual(d.source, b)
 
-    a.end()
+    a.kill()
     //       a
     //        
     //        
@@ -140,7 +140,7 @@ describe("sig", function() {
     assert.deepEqual(c.source, b)
     assert.strictEqual(d.source, b)
 
-    c.end()
+    c.kill()
     //       a
     //       |
     //       v
@@ -158,7 +158,7 @@ describe("sig", function() {
     assert.strictEqual(c.source, b)
     assert.strictEqual(d.source, b)
 
-    d.end()
+    d.kill()
     //       a
     //        
     //        
@@ -196,7 +196,7 @@ describe("sig", function() {
     assert.strictEqual(e.source, b)
   })
 
-  it("should support signal ending", function() {
+  it("should support signal killing", function() {
     var a = sig()
     var b = sig()
     var c = sig()
@@ -218,7 +218,7 @@ describe("sig", function() {
     b.put(1)
      .put(2)
      .put(3)
-     .end()
+     .kill()
 
     assert(a.disconnected)
     assert(b.disconnected)
@@ -257,7 +257,7 @@ describe("sig", function() {
     assert.strictEqual(s.error, null)
   })
 
-  it("should allow handlers of ending signals to rethrow errors", function() {
+  it("should allow handlers of killing signals to rethrow errors", function() {
     var s = sig()
 
     s.errorHandler = function(e) {
@@ -408,7 +408,7 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it("should allow a target signal to end", function() {
+  it("should allow a target signal to kill", function() {
     var a = sig()
     var b = sig()
     var results = capture(b)
@@ -421,7 +421,7 @@ describe("sig", function() {
      .put(2)
      .put(3)
 
-    b.end()
+    b.kill()
 
     assert(a.disconnected)
     assert(b.disconnected)
@@ -430,7 +430,7 @@ describe("sig", function() {
     assert.deepEqual(results, [1, 2, 3])
   })
 
-  it("should allow a source signal to end", function() {
+  it("should allow a source signal to kill", function() {
     var a = sig()
     var b = sig()
     var c = sig()
@@ -452,7 +452,7 @@ describe("sig", function() {
     b.put(1)
      .put(2)
      .put(3)
-     .end()
+     .kill()
 
     assert(a.disconnected)
     assert(b.disconnected)
@@ -491,7 +491,7 @@ describe("sig", function() {
       s.then(sig())
       assert(s.paused)
 
-      t.end()
+      t.kill()
       s.then(sig())
       assert(s.paused)
     })
@@ -560,7 +560,7 @@ describe("sig", function() {
 
 
   describe(".teardown", function() {
-    it("should call the function when a signal ends", function() {
+    it("should call the function when a signal is killed", function() {
       var s = sig()
       var run = false
 
@@ -570,7 +570,7 @@ describe("sig", function() {
       })
 
       assert(!run)
-      s.end()
+      s.kill()
       assert(run)
     })
   })
@@ -643,7 +643,7 @@ describe("sig", function() {
         .call(capture, assert.deepEqual, [1, 2, 3])
     })
 
-    it("should end the signal chain once the limit is reached", function() {
+    it("should kill the signal chain once the limit is reached", function() {
       var s = sig()
       s.limit(3).then(sig())
 
@@ -674,7 +674,7 @@ describe("sig", function() {
         .call(capture, assert.deepEqual, [1])
     })
 
-    it("should end the signal chain after outputting a value", function() {
+    it("should kill the signal chain after outputting a value", function() {
       var s = sig()
       s.once().then(sig())
 
@@ -752,14 +752,14 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it("should ends its listeners when the out signal ends", function() {
+    it("should kills its listeners when the out signal is killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.any([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.end()
+      s.kill()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -917,14 +917,14 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it("should ends its listeners when the out signal ends", function() {
+    it("should kills its listeners when the out signal is killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.all([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.end()
+      s.kill()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -1006,14 +1006,14 @@ describe("sig", function() {
       assert.deepEqual(results, [1, 2, 3, 4])
     })
 
-    it("should ends its listeners when the out signal ends", function() {
+    it("should kills its listeners when the out signal is killed", function() {
       var a = sig()
       var b = sig()
       var s = sig.merge([a, b])
       assert.equal(a.targets.length, 1)
       assert.equal(b.targets.length, 1)
 
-      s.end()
+      s.kill()
       assert(!a.targets.length)
       assert(!b.targets.length)
     })
@@ -1130,12 +1130,12 @@ describe("sig", function() {
   })
 
 
-  describe(".append", function() {
-    it("should append each returned signal", function() {
+  describe(".appkill", function() {
+    it("should appkill each returned signal", function() {
       var s = sig()
 
       var results = s
-        .append(function(u) {
+        .appkill(function(u) {
           return u.map(function(x) { return x * 2 })
         })
         .call(capture)
@@ -1165,7 +1165,7 @@ describe("sig", function() {
       var s = sig()
 
       var results = s
-        .append(sig.map, function(x) { return x * 2 })
+        .appkill(sig.map, function(x) { return x * 2 })
         .call(capture)
 
       var t = sig()
@@ -1187,7 +1187,7 @@ describe("sig", function() {
 
     it("should default to an identity function", function() {
       var s = sig()
-      var results = capture(s.append())
+      var results = capture(s.appkill())
 
       var t = sig()
       s.put(t)
@@ -1203,7 +1203,7 @@ describe("sig", function() {
       var s = sig()
 
       var results = s
-        .append(function(x) {
+        .appkill(function(x) {
           if (x % 2) return sig.val(x)
         })
         .call(capture)
@@ -1306,7 +1306,7 @@ describe("sig", function() {
       s.raise(e)
     })
 
-    it("should not redirect after the target has ended", function() {
+    it("should not redirect after the target has killed", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
@@ -1319,7 +1319,7 @@ describe("sig", function() {
 
       assert.deepEqual(results, [1, 2, 3])
 
-      t.end()
+      t.kill()
 
       s.put(4)
        .put(5)
@@ -1342,15 +1342,15 @@ describe("sig", function() {
 
 
   describe(".resolve", function() {
-    it("should put the given value, then end", function() {
-      var ended = false
+    it("should put the given value, then kill", function() {
+      var killed = false
 
       var s = sig()
-        .teardown(function() { ended = true })
+        .teardown(function() { killed = true })
         .resolve(23)
         .call(capture, assert.deepEqual, [23])
 
-      assert(ended)
+      assert(killed)
     })
   })
 
