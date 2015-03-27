@@ -14,7 +14,7 @@
     s.targets = []
     s.source = null
     s.processor = putNextProcessor
-    s.errorHandler = raiseNextHandler
+    s.errorHandler = throwNextHandler
     s.current = _nil_
     s.inBuffer = []
     s.outBuffer = []
@@ -191,14 +191,14 @@
   }
 
 
-  sig.prototype.raise = function(e) {
+  sig.prototype.throw = function(e) {
     if (!this.error) handleError(this, e)
     else propogateError(this, e)
     return this
   }
 
 
-  sig.prototype.except = function(fn) {
+  sig.prototype.catch = function(fn) {
     var t = sig()
     fn = sig.prime(sig.slice(arguments, 1), fn)
     t.errorHandler = fn
@@ -278,8 +278,8 @@
         t.put(v)
         this.next()
       })
-      .except(function(e) {
-        t.raise(e)
+      .catch(function(e) {
+        t.throw(e)
         this.next()
       })
       .dependOn(t)
@@ -343,8 +343,8 @@
   }
 
 
-  function raiseNextHandler(e) {
-    this.raise(e).next()
+  function throwNextHandler(e) {
+    this.throw(e).next()
   }
 
 
@@ -399,7 +399,7 @@
 
 
   function setSource(t, s) {
-    if (t.source) t.raise(new Error(
+    if (t.source) t.throw(new Error(
       "Cannot set signal's source, signal already has a source"))
     else t.source = s
   }
@@ -456,7 +456,7 @@
     if (!n) throw e
 
     var i = -1
-    while (++i < n) targets[i].raise(e)
+    while (++i < n) targets[i].throw(e)
   }
 
 
@@ -562,8 +562,8 @@
   sig.receive = sig.static(sig.prototype.receive)
   sig.pause = sig.static(sig.prototype.pause)
   sig.resume = sig.static(sig.prototype.resume)
-  sig.raise = sig.static(sig.prototype.raise)
-  sig.except = sig.static(sig.prototype.except)
+  sig.throw = sig.static(sig.prototype.throw)
+  sig.catch = sig.static(sig.prototype.catch)
   sig.teardown = sig.static(sig.prototype.teardown)
   sig.map = sig.static(sig.prototype.map)
   sig.filter = sig.static(sig.prototype.filter)

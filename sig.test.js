@@ -237,12 +237,12 @@ describe("sig", function() {
       done()
     }
 
-    s.raise(e)
+    s.throw(e)
   })
 
   it("should throw unhandled errors", function() {
     function thrower() {
-      sig().raise(new Error('o_O'))
+      sig().throw(new Error('o_O'))
     }
 
     assert.throws(thrower, /o_O/)
@@ -251,7 +251,7 @@ describe("sig", function() {
   it("should unset errors even if error handlers throw errors", function() {
     var s = sig()
 
-    try { s.raise('o_O') }
+    try { s.throw('o_O') }
     catch (e) {}
 
     assert.strictEqual(s.error, null)
@@ -261,11 +261,11 @@ describe("sig", function() {
     var s = sig()
 
     s.errorHandler = function(e) {
-      s.raise(new Error(e + '!'))
+      s.throw(new Error(e + '!'))
     }
 
     function thrower() {
-      s.raise(new Error('o_O'))
+      s.throw(new Error('o_O'))
     }
 
     assert.throws(thrower, /o_O!/)
@@ -286,7 +286,7 @@ describe("sig", function() {
     s2.then(s4)
 
     s1.errorHandler = function(caughtErr) {
-      if (caughtErr.message != ':|') this.raise(caughtErr)
+      if (caughtErr.message != ':|') this.throw(caughtErr)
     }
 
     s3.errorHandler = function(caughtErr) {
@@ -297,20 +297,20 @@ describe("sig", function() {
       s4Err = caughtErr
     }
 
-    s1.raise(e1)
-      .raise(e2)
+    s1.throw(e1)
+      .throw(e2)
 
     assert.strictEqual(s3Err, e1)
     assert.strictEqual(s4Err, e1)
   })
 
-  it("should catch and raise errors raised in processors", function(done) {
+  it("should catch and throw errors throwd in processors", function(done) {
     var s = sig()
     var t = sig()
     var e = new Error('o_O')
 
     t.processor = function() {
-      t.raise(e)
+      t.throw(e)
     }
 
     t.errorHandler = function(caughtErr) {
@@ -531,30 +531,30 @@ describe("sig", function() {
   })
 
 
-  describe(".except", function(done) {
+  describe(".catch", function(done) {
     it("should create a signal that catches errors", function(done) {
       var s = sig()
       var e = new Error(':/')
 
-      var t = s.except(function(caughtErr) {
+      var t = s.catch(function(caughtErr) {
         assert.strictEqual(caughtErr, e)
         done()
       })
 
       assert.notStrictEqual(t, s)
-      s.raise(e)
+      s.throw(e)
     })
 
     it("should support extra arguments", function(done) {
       var s = sig()
 
-      s.except(function(caughtErr, a, b) {
+      s.catch(function(caughtErr, a, b) {
         assert.strictEqual(a, 1)
         assert.strictEqual(b, 2)
         done()
       }, 1, 2)
 
-      s.raise(new Error(':/'))
+      s.throw(new Error(':/'))
     })
   })
 
@@ -776,14 +776,14 @@ describe("sig", function() {
       var b = sig()
 
       sig.any([a, b])
-        .except(function(e) {
+        .catch(function(e) {
           results.push(e.message)
         })
 
-      a.raise(new Error(':/'))
-      b.raise(new Error(':|'))
-      a.raise(new Error('o_O'))
-      b.raise(new Error('-_-'))
+      a.throw(new Error(':/'))
+      b.throw(new Error(':|'))
+      a.throw(new Error('o_O'))
+      b.throw(new Error('-_-'))
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
@@ -952,14 +952,14 @@ describe("sig", function() {
       var b = sig()
 
       sig.all([a, b])
-        .except(function(e) {
+        .catch(function(e) {
           results.push(e.message)
         })
 
-      a.raise(new Error(':/'))
-      b.raise(new Error(':|'))
-      a.raise(new Error('o_O'))
-      b.raise(new Error('-_-'))
+      a.throw(new Error(':/'))
+      b.throw(new Error(':|'))
+      a.throw(new Error('o_O'))
+      b.throw(new Error('-_-'))
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
@@ -1030,14 +1030,14 @@ describe("sig", function() {
       var b = sig()
 
       sig.merge([a, b])
-        .except(function(e) {
+        .catch(function(e) {
           results.push(e.message)
         })
 
-      a.raise(new Error(':/'))
-      b.raise(new Error(':|'))
-      a.raise(new Error('o_O'))
-      b.raise(new Error('-_-'))
+      a.throw(new Error(':/'))
+      b.throw(new Error(':|'))
+      a.throw(new Error('o_O'))
+      b.throw(new Error('-_-'))
       
       assert.deepEqual(results, [':/', ':|', 'o_O', '-_-'])
     })
@@ -1324,12 +1324,12 @@ describe("sig", function() {
 
       s.redir(t)
 
-      t.except(function(nextE) {
+      t.catch(function(nextE) {
         assert.strictEqual(e, nextE)
         done()
       })
 
-      s.raise(e)
+      s.throw(e)
     })
 
     it("should not redirect after the target has been killed", function() {
