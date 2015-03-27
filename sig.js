@@ -327,18 +327,14 @@
 
 
   sig.prototype.append = function(fn) {
-    var out = sig()
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
-    this
+    return this
       .then(function(v) {
         var u = fn(v)
-        if (sig.isSig(u)) u.redir(out)
+        if (sig.isSig(u)) u.redir(this)
         this.next()
       })
-      .dependOn(out)
-
-    return out
   }
 
 
