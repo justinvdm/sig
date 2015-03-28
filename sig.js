@@ -1,6 +1,5 @@
 ;(function() {
   var _nil_ = {}
-  var _kill_ = {}
 
   var isArray = Array.isArray
   var _slice = Array.prototype.slice
@@ -13,12 +12,12 @@
     var s = new Sig()
     s.targets = []
     s.source = null
-    s.processor = putNextProcessor
-    s.errorHandler = throwNextHandler
+    s.handlers = {}
+    s.handlers.value = putNextHandler
+    s.handlers.error = throwNextHandler
     s.current = _nil_
     s.inBuffer = []
     s.outBuffer = []
-    s.error = null
     s.eventListeners = {}
     s.eager = true
     s.sticky = false
@@ -72,12 +71,12 @@
     var remaining = {}
     values = copy(values)
 
-    each(values, function(s, k) {
+    objEach(values, function(s, k) {
       if (sig.isSig(s)) remaining[k] = true
     })
 
     if (!isEmpty(remaining))
-      each(values, function(s, k) {
+      objEach(values, function(s, k) {
         if (sig.isSig(s)) s.then(output, k).redir(out)
       })
     else
@@ -157,23 +156,35 @@
   sig.prototype.kill = function() {
     emit(this, 'kill')
     disconnect(this)
-    this.put(_kill_)
     this.killed = true
+    propogate(this, {type: 'kill'})
+    return this
+  }
+
+
+  sig.prototype.teardown = function(fn) {
+    fn = sig.prime(sig.slice(arguments, 1), fn)
+    if (this.killed) fn.call(this)
+    else on(this, 'kill', fn)
     return this
   }
 
 
   sig.prototype.put = function(v) {
     if (this.sticky) this.current = v
-    if (this.paused) buffer(this, v)
-    else send(this, v)
+
+    propogate(this, {
+      type: 'value',
+      data: v
+    })
+
     return this
   }
 
 
   sig.prototype.next = function() {
     if (!this.inBuffer.length) this.waiting = true
-    else process(this, this.inBuffer.shift())
+    else handle(this, this.inBuffer.shift())
     return this
   }
 
@@ -192,18 +203,14 @@
 
 
   sig.prototype.throw = function(e) {
-    if (!this.error) handleError(this, e)
-    else propogateError(this, e)
+    if (!this.targets.length) throw(e)
+
+    propogate(this, {
+      type: 'error',
+      data: e
+    })
+
     return this
-  }
-
-
-  sig.prototype.catch = function(fn) {
-    var t = sig()
-    fn = sig.prime(sig.slice(arguments, 1), fn)
-    t.errorHandler = fn
-    this.then(t)
-    return t
   }
 
 
@@ -214,11 +221,12 @@
   }
 
 
-  sig.prototype.teardown = function(fn) {
+  sig.prototype.catch = function(fn) {
+    var t = sig()
     fn = sig.prime(sig.slice(arguments, 1), fn)
-    if (this.killed) fn.call(this)
-    else on(this, 'kill', fn)
-    return this
+    t.handlers.error = fn
+    this.then(t)
+    return t
   }
 
 
@@ -338,7 +346,25 @@
   }
 
 
-  function putNextProcessor(v) {
+  var handlers = {}
+
+
+  handlers.kill = function(s) {
+    s.kill()
+  }
+
+
+  handlers.value = function(s, v) {
+    s.handlers.value.call(s, v)
+  }
+
+
+  handlers.error = function(s, e) {
+    s.handlers.error.call(s, e)
+  }
+
+
+  function putNextHandler(v) {
     this.put(v).next()
   }
 
@@ -356,7 +382,10 @@
 
     if (s.disconnected) reconnect(s)
     if (s.eager && firstTarget) s.resume()
-    else if (s.sticky && s.current != _nil_) receive(t, s.current)
+    else if (s.sticky && s.current != _nil_) receive(t, {
+      type: 'value',
+      data: s.current
+    })
   }
 
 
@@ -405,14 +434,18 @@
   }
 
 
-  function process(s, v) {
-    if (v == _kill_) s.kill()
-    else s.processor(v)
+  function handle(s, msg) {
+    var fn = 'data' in msg
+      ? handlers[msg.type].bind(null, s, msg.data)
+      : handlers[msg.type].bind(null, s)
+
+    try { fn() }
+    catch(error) { s.throw(error) }
   }
 
 
-  function receive(s, v) {
-    s.inBuffer.push(v)
+  function receive(s, msg) {
+    s.inBuffer.push(msg)
 
     if (s.waiting) {
       s.waiting = false
@@ -421,16 +454,18 @@
   }
 
 
-  function send(s, v) {
-    var targets = sig.slice(s.targets)
-    var i = -1
-    var n = targets.length
-    while (++i < n) receive(targets[i], v)
+  function propogate(s, msg) {
+    // errors are a special case, force sending
+    if (s.paused && msg.type != 'error') s.outBuffer.push(msg)
+    else send(s, msg)
   }
 
 
-  function buffer(s, v) {
-    s.outBuffer.push(v)
+  function send(s, msg) {
+    var targets = sig.slice(s.targets)
+    var i = -1
+    var n = targets.length
+    while (++i < n) receive(targets[i], msg)
   }
 
 
@@ -443,26 +478,9 @@
   }
 
 
-  function handleError(s, e) {
-    s.error = e
-    try { s.errorHandler.call(s, e) }
-    finally { s.error = null }
-  }
-
-
-  function propogateError(s, e) {
-    var targets = s.targets
-    var n = targets.length
-    if (!n) throw e
-
-    var i = -1
-    while (++i < n) targets[i].throw(e)
-  }
-
-
   function thenFn(s, fn, args) {
     var t = sig()
-    t.processor = sig.prime(args, fn)
+    t.handlers.value = sig.prime(args, fn)
     thenSig(s, t)
     return t
   }
@@ -491,7 +509,7 @@
   }
 
 
-  function each(obj, fn) {
+  function objEach(obj, fn) {
     if (Array.isArray(obj)) return obj.forEach(fn)
     for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
   }
@@ -499,7 +517,7 @@
 
   function objMap(obj, fn) {
     var results = []
-    each(obj, function(v, k) {
+    objEach(obj, function(v, k) {
       results.push(fn(v, k))
     })
     return results

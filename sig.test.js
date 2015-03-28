@@ -228,107 +228,13 @@ describe("sig", function() {
     assert.deepEqual(dValues, [1, 2, 3])
   })
 
-  it("should support error handling", function(done) {
-    var s = sig()
-    var e = new Error(':/')
-
-    s.errorHandler = function(caughtErr) {
-      assert.strictEqual(caughtErr, e)
-      done()
-    }
-
-    s.throw(e)
-  })
-
-  it("should throw unhandled errors", function() {
-    function thrower() {
-      sig().throw(new Error('o_O'))
-    }
-
-    assert.throws(thrower, /o_O/)
-  })
-
-  it("should unset errors even if error handlers throw errors", function() {
-    var s = sig()
-
-    try { s.throw('o_O') }
-    catch (e) {}
-
-    assert.strictEqual(s.error, null)
-  })
-
-  it("should allow handlers of killing signals to rethrow errors", function() {
-    var s = sig()
-
-    s.errorHandler = function(e) {
-      s.throw(new Error(e + '!'))
-    }
-
-    function thrower() {
-      s.throw(new Error('o_O'))
-    }
-
-    assert.throws(thrower, /o_O!/)
-  })
-
-  it("should allow errors to propogate", function() {
-    var s1 = sig()
-    var s2 = sig()
-    var s3 = sig()
-    var s4 = sig()
-    var s3Err, s4Err
-
-    var e1 = new Error('o_O')
-    var e2 = new Error(':|')
-
-    s1.then(s2)
-    s2.then(s3)
-    s2.then(s4)
-
-    s1.errorHandler = function(caughtErr) {
-      if (caughtErr.message != ':|') this.throw(caughtErr)
-    }
-
-    s3.errorHandler = function(caughtErr) {
-      s3Err = caughtErr
-    }
-
-    s4.errorHandler = function(caughtErr) {
-      s4Err = caughtErr
-    }
-
-    s1.throw(e1)
-      .throw(e2)
-
-    assert.strictEqual(s3Err, e1)
-    assert.strictEqual(s4Err, e1)
-  })
-
-  it("should catch and throw errors throwd in processors", function(done) {
-    var s = sig()
-    var t = sig()
-    var e = new Error('o_O')
-
-    t.processor = function() {
-      t.throw(e)
-    }
-
-    t.errorHandler = function(caughtErr) {
-      assert.strictEqual(caughtErr, e)
-      done()
-    }
-
-    s.then(t)
-    s.resolve()
-  })
-
   it("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
     var t = sig()
     var u = sig()
 
-    u.processor = function(v) {
+    u.handlers.value = function(v) {
       results.push(v)
       this.next()
     }
@@ -386,12 +292,12 @@ describe("sig", function() {
     var t1 = sig()
     var t2 = sig()
 
-    t1.processor = function(x) {
+    t1.handlers.value = function(x) {
       results1.push(x)
       this.next()
     }
 
-    t2.processor = function(x) {
+    t2.handlers.value = function(x) {
       results2.push(x)
       this.next()
     }
@@ -478,6 +384,145 @@ describe("sig", function() {
   })
 
 
+  describe("error handling", function() {
+    it("should support error handling", function() {
+      var s = sig()
+      var t = s.then(sig())
+      var results = capture(t)
+      var e1 = new Error(':/')
+      var e2 = new Error('o_O')
+
+      t.handlers.error = function(e) {
+        this.put(e).next()
+      }
+
+      assert(!results.length)
+
+      s.throw(e1)
+      assert.equal(results.length, 1)
+      assert.strictEqual(results[0], e1)
+
+      s.throw(e2)
+      assert.equal(results.length, 2)
+      assert.strictEqual(results[0], e1)
+      assert.strictEqual(results[1], e2)
+    })
+
+    it("should throw unhandled errors", function() {
+      function thrower() {
+        sig().throw(new Error('o_O'))
+      }
+
+      assert.throws(thrower, /o_O/)
+    })
+
+    it("should allow errors to propogate", function() {
+      var s1 = sig()
+      var s2 = sig()
+      var s3 = sig()
+      var s4 = sig()
+      var s3Err, s4Err
+
+      var e1 = new Error('o_O')
+      var e2 = new Error(':|')
+
+      s1.then(s2)
+      s2.then(s3)
+      s2.then(s4)
+
+      s2.handlers.error = function(caughtErr) {
+        if (caughtErr.message != ':|') this.throw(caughtErr)
+      }
+
+      s3.handlers.error = function(caughtErr) {
+        s3Err = caughtErr
+      }
+
+      s4.handlers.error = function(caughtErr) {
+        s4Err = caughtErr
+      }
+
+      s1.throw(e1)
+        .throw(e2)
+
+      assert.strictEqual(s3Err, e1)
+      assert.strictEqual(s4Err, e1)
+    })
+
+    it("should handle errors thrown in value handlers", function(done) {
+      var s = sig()
+      var t = s.then(sig())
+      var u = t.then(sig())
+      var e = new Error('o_O')
+
+      t.handlers.value = function() {
+        this.throw(e)
+      }
+
+      u.handlers.error = function(caughtErr) {
+        assert.strictEqual(caughtErr, e)
+        done()
+      }
+
+      s.put()
+    })
+
+    it("should handle errors thrown natively in value handlers", function(done) {
+      var s = sig()
+      var t = s.then(sig())
+      var u = t.then(sig())
+      var e = new Error('o_O')
+
+      t.handlers.value = function() {
+        throw e
+      }
+
+      u.handlers.error = function(caughtErr) {
+        assert.strictEqual(caughtErr, e)
+        done()
+      }
+
+      s.put()
+    })
+
+    it("should handle errors thrown in error handlers", function(done) {
+      var s = sig()
+      var t = s.then(sig())
+      var u = t.then(sig())
+      var e = new Error('o_O')
+
+      t.handlers.error = function() {
+        this.throw(e)
+      }
+
+      u.handlers.error = function(caughtErr) {
+        assert.strictEqual(caughtErr, e)
+        done()
+      }
+
+      s.throw(new Error(':/'))
+    })
+
+    it("should handle errors thrown natively in error handlers", function(done) {
+      var s = sig()
+      var t = s.then(sig())
+      var u = t.then(sig())
+      var e = new Error('o_O')
+
+      t.handlers.error = function() {
+        throw e
+      }
+
+      u.handlers.error = function(caughtErr) {
+        assert.strictEqual(caughtErr, e)
+        done()
+      }
+
+      s.throw(new Error(':/'))
+    })
+  })
+
+
   describe("eager signals", function() {
     it("should resume when the first target is added", function() {
       var s = sig()
@@ -509,11 +554,11 @@ describe("sig", function() {
 
     it("should support creating and connecting to a new target", function() {
       var s = sig()
-      var t = s.then(processor)
+      var t = s.then(handler)
       assert.deepEqual(s.targets, [t])
       assert.strictEqual(t.source, s)
-      assert.strictEqual(t.processor, processor)
-      function processor() {}
+      assert.strictEqual(t.handlers.value, handler)
+      function handler() {}
     })
 
     it("should allow extra arguments to be given", function(done) {
@@ -778,6 +823,7 @@ describe("sig", function() {
       sig.any([a, b])
         .catch(function(e) {
           results.push(e.message)
+          this.next()
         })
 
       a.throw(new Error(':/'))
@@ -954,6 +1000,7 @@ describe("sig", function() {
       sig.all([a, b])
         .catch(function(e) {
           results.push(e.message)
+          this.next()
         })
 
       a.throw(new Error(':/'))
@@ -1032,6 +1079,7 @@ describe("sig", function() {
       sig.merge([a, b])
         .catch(function(e) {
           results.push(e.message)
+          this.next()
         })
 
       a.throw(new Error(':/'))
