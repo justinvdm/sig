@@ -110,8 +110,9 @@
   }
 
 
-  sig.log = function() {
-    return _log.apply(console, arguments)
+  sig.log = function(v) {
+    _log.apply(console, arguments)
+    return v
   }
 
 
