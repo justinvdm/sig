@@ -415,7 +415,7 @@ describe("sig", function() {
       assert.throws(thrower, /o_O/)
     })
 
-    it("should allow errors to propogate", function() {
+    it("should allow errors to propagate", function() {
       var s1 = sig()
       var s2 = sig()
       var s3 = sig()

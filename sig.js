@@ -156,7 +156,7 @@
     emit(this, 'kill')
     disconnect(this)
     this.killed = true
-    propogate(this, {type: 'kill'})
+    propagate(this, {type: 'kill'})
     return this
   }
 
@@ -172,7 +172,7 @@
   sig.prototype.put = function(v) {
     if (this.sticky) this.current = v
 
-    propogate(this, {
+    propagate(this, {
       type: 'value',
       data: v
     })
@@ -204,7 +204,7 @@
   sig.prototype.throw = function(e) {
     if (!this.targets.length) throw(e)
 
-    propogate(this, {
+    propagate(this, {
       type: 'error',
       data: e
     })
@@ -449,7 +449,7 @@
   }
 
 
-  function propogate(s, msg) {
+  function propagate(s, msg) {
     // errors are a special case, force sending
     if (s.paused && msg.type != 'error') s.outBuffer.push(msg)
     else send(s, msg)
