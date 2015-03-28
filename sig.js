@@ -280,13 +280,6 @@
   }
 
 
-  sig.prototype.dependOn = function(t) {
-    this.isDependant = true
-    on(t, 'disconnect', disconnect, this)
-    return this
-  }
-
-
   sig.prototype.redir = function(t) {
     return this
       .each(sig.to, t)
@@ -294,7 +287,7 @@
         t.throw(e)
         this.next()
       })
-      .dependOn(t)
+      .call(dependOn, t)
   }
 
 
@@ -508,6 +501,13 @@
     var n = listeners.length
     var i = -1
     while (++ i < n) listeners[i].apply(s, args)
+  }
+
+
+  function dependOn(s, t) {
+    s.isDependant = true
+    on(t, 'disconnect', disconnect, s)
+    return s
   }
 
 

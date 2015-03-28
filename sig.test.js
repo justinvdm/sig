@@ -1354,26 +1354,6 @@ describe("sig", function() {
     })
   })
 
-  describe(".dependOn", function() {
-    it("should set the signal as a dependant", function() {
-      var a = sig()
-      var b = sig()
-      assert(!b.isDependant)
-      b.dependOn(a)
-      assert(b.isDependant)
-    })
-
-    it("should disconnect the signal with the target disconnects", function() {
-      var a = sig()
-      var b = sig()
-      b.dependOn(a)
-
-      assert(!b.disconnected)
-      a.kill()
-      assert(b.disconnected)
-    })
-  })
-
   describe(".redir", function() {
     it("should redirect signal output", function() {
       var s = sig()
