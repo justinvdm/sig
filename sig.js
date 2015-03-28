@@ -59,9 +59,8 @@
 
     return sig(pairs(values))
       .filter(sig.spread, sig.isSig)
-      .then(sig.spread, function(s, k) {
+      .each(sig.spread, function(s, k) {
         s.map(identityAll, k).redir(this)
-        this.next()
       })
   }
 
@@ -230,12 +229,22 @@
   }
 
 
+  sig.prototype.each = function(fn) {
+    fn = sig.prime(sig.slice(arguments, 1), fn)
+
+    return this.then(function() {
+      fn.apply(this, arguments)
+      this.next()
+    })
+  }
+
+
   sig.prototype.map = function(fn) {
     fn = sig.functor(fn)
     fn = sig.prime(sig.slice(arguments, 1), fn)
 
-    return this.then(function() {
-      this.put(fn.apply(this, arguments)).next()
+    return this.each(function() {
+      this.put(fn.apply(this, arguments))
     })
   }
 
@@ -243,17 +252,15 @@
   sig.prototype.filter = function(fn) {
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
-    return this.then(function(v) {
+    return this.each(function(v) {
       if (fn.apply(this, arguments)) this.put(v)
-      this.next()
     })
   }
 
 
   sig.prototype.flatten = function() {
-    return this.then(function(v) {
+    return this.each(function(v) {
       deepEach(v, sig.to, this)
-      this.next()
     })
   }
 
@@ -261,8 +268,8 @@
   sig.prototype.limit = function(n) {
     var i = 0
     
-    return this.then(function(v) {
-      if (++i <= n) this.put(v).next()
+    return this.each(function(v) {
+      if (++i <= n) this.put(v)
       if (i >= n) this.kill()
     })
   }
@@ -282,10 +289,7 @@
 
   sig.prototype.redir = function(t) {
     return this
-      .then(function(v) {
-        t.put(v)
-        this.next()
-      })
+      .each(sig.to, t)
       .catch(function(e) {
         t.throw(e)
         this.next()
@@ -319,11 +323,10 @@
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
     return this
-      .then(function(v) {
+      .each(function(v) {
         if (curr) curr.kill()
         var u = fn(v)
         if (sig.isSig(u)) curr = u.redir(this)
-        this.next()
       })
   }
 
@@ -334,9 +337,8 @@
     return this
       .map(fn)
       .filter(sig.isSig)
-      .then(function(s) {
+      .each(function(s) {
         s.redir(this)
-        this.next()
       })
   }
 
@@ -583,6 +585,7 @@
   sig.throw = sig.static(sig.prototype.throw)
   sig.catch = sig.static(sig.prototype.catch)
   sig.teardown = sig.static(sig.prototype.teardown)
+  sig.each = sig.static(sig.prototype.each)
   sig.map = sig.static(sig.prototype.map)
   sig.filter = sig.static(sig.prototype.filter)
   sig.flatten = sig.static(sig.prototype.flatten)

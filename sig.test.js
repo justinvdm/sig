@@ -6,9 +6,8 @@ function capture(s, fn) {
   var results = []
   fn = sig.prime(sig.slice(arguments, 2), fn || sig.identity)
 
-  s.then(function(v) {
+  s.each(function(v) {
     results.push(v)
-    this.next()
   })
 
   return fn(results)
@@ -617,6 +616,31 @@ describe("sig", function() {
       assert(!run)
       s.kill()
       assert(run)
+    })
+  })
+
+
+  describe(".each", function() {
+    it("should process each value given by the signal", function() {
+      sig([1, 2, 3, 4])
+        .each(function(x) { this.put(x * 2) })
+        .each(function(x) { this.put(x + 1) })
+        .call(capture, assert.deepEqual, [3, 5, 7, 9])
+    })
+
+    it("should allow additional args", function() {
+      function fn(a, b, c) {
+        this.put([a, b, c])
+      }
+
+      return sig([1, 2, 3, 4])
+        .each(fn, 23, 32)
+        .call(capture, assert.deepEqual, [
+          [1, 23, 32],
+          [2, 23, 32],
+          [3, 23, 32],
+          [4, 23, 32]
+        ])
     })
   })
 
