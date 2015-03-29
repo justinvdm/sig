@@ -153,11 +153,15 @@
 
 
   sig.prototype.kill = function() {
-    emit(this, 'kill')
     propagate(this, {type: 'kill'})
-    disconnect(this)
-    clear(this)
-    this.killed = true
+
+    // if there are messages in the buffer other than the kill message we just
+    // propagated, we need to wait for a flush before killing can complete
+    if (this.outBuffer.length > 1)
+      on(this, 'flush', finishKill, this)
+    else
+      finishKill(this)
+
     return this
   }
 
@@ -171,7 +175,7 @@
 
 
   sig.prototype.put = function(v) {
-    if (this.killed) throw new Error('.put() used on a dead signal')
+    if (this.killed) return this
     if (this.sticky) this.current = v
 
     propagate(this, {
@@ -204,8 +208,8 @@
 
 
   sig.prototype.throw = function(e) {
-    if (this.killed) throw new Error('.throw() used on a dead signal')
-    if (!this.targets.length) throw(e)
+    if (this.killed) return this
+    if (!this.targets.length) throw e
 
     propagate(this, {
       type: 'error',
@@ -318,12 +322,11 @@
     var curr
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
-    return this
-      .each(function(v) {
-        if (curr) curr.kill()
-        var u = fn(v)
-        if (sig.isSig(u)) curr = u.redir(this)
-      })
+    return this.each(function(v) {
+      if (curr) curr.kill()
+      var u = fn(v)
+      if (sig.isSig(u)) curr = u.redir(this)
+    })
   }
 
 
@@ -469,6 +472,7 @@
     var n = buffer.length
     while (++i < n) send(s, buffer[i])
     s.outBuffer = []
+    emit(s, 'flush')
   }
 
 
@@ -481,7 +485,7 @@
 
 
   function thenSig(s, t) {
-    connect(s, t)
+    if (!s.killed) connect(s, t)
     return t
   }
 
@@ -514,6 +518,15 @@
     s.source = null
     s.targets = []
     s.inBuffer = []
+    s.outBuffer = []
+  }
+
+
+  function finishKill(s) {
+    emit(s, 'kill')
+    disconnect(s)
+    clear(s)
+    s.killed = true
   }
 
 

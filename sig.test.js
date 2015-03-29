@@ -271,24 +271,53 @@ describe("sig", function() {
       assert.strictEqual(e.source, b)
     })
 
-    it("should throw an error if .put() is used on a dead signal", function() {
-      function thrower() {
-        sig()
-          .kill()
-          .put(23)
-      }
+    it("should not allow values to propagate from dead signals", function() {
+      var a = sig()
+      var b = sig()
+      var c = sig()
+      var results = capture(b)
 
-      assert.throws(thrower, /.put\(\) used on a dead signal/)
+      a.targets = [b]
+      a.resume().put(21)
+      assert.deepEqual(results, [21])
+
+      a.kill()
+      results = capture(c)
+      a.targets = [c]
+      a.put(23)
+      assert(!results.length)
     })
 
-    it("should throw an error if .throw() is used on a dead signal", function() {
-      function thrower() {
-        sig()
-          .kill()
-          .throw(new Error(':/'))
+    it("should not allow errors to propagate from dead signals", function() {
+      var results
+      var a = sig()
+      var b = sig()
+      var c = sig()
+
+      b.handlers.error = c.handlers.error = function(e) {
+        this.put(e).next()
       }
 
-      assert.throws(thrower, /.throw\(\) used on a dead signal/)
+      results = capture(b)
+      a.targets = [b]
+      a.resume().put(21)
+      assert.deepEqual(results, [21])
+
+      a.kill()
+
+      results = capture(c)
+      a.targets = [c]
+      a.put(23)
+      assert(!results.length)
+    })
+
+    it("should not allow targets to be added to dead signals", function() {
+      var a = sig().kill()
+      var b = a.then(sig())
+      var c = a.then(function(){})
+      assert(!a.targets.length)
+      assert.strictEqual(b.source, null)
+      assert.strictEqual(c.source, null)
     })
   })
 
@@ -489,6 +518,18 @@ describe("sig", function() {
 
       assert(!run)
       s.kill()
+      assert(run)
+    })
+
+    it("should get called immediately if the signal is dead", function() {
+      var s = sig().kill()
+      var run = false
+
+      s.teardown(function() {
+        run = true
+        assert.strictEqual(this, s)
+      })
+
       assert(run)
     })
   })
@@ -701,18 +742,6 @@ describe("sig", function() {
       assert.deepEqual(results, [[1, 'a'], [2, 'b'], [3, 'a'], [4, 'b']])
     })
 
-    it("should disconnect its listeners when killed", function() {
-      var a = sig()
-      var b = sig()
-      var s = sig.any([a, b])
-      assert(!a.disconnected)
-      assert(!b.disconnected)
-
-      s.kill()
-      assert(a.disconnected)
-      assert(b.disconnected)
-    })
-
     it("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
@@ -867,18 +896,6 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it("should disconnect its listeners when killed", function() {
-      var a = sig()
-      var b = sig()
-      var s = sig.all([a, b])
-      assert(!a.disconnected)
-      assert(!b.disconnected)
-
-      s.kill()
-      assert(a.disconnected)
-      assert(b.disconnected)
-    })
-
     it("should work with signals with non-empty buffers", function() {
       var a = sig()
       a.put(1)
@@ -955,18 +972,6 @@ describe("sig", function() {
 
       b.put(4)
       assert.deepEqual(results, [1, 2, 3, 4])
-    })
-
-    it("should disconnect its listeners when killed", function() {
-      var a = sig()
-      var b = sig()
-      var s = sig.merge([a, b])
-      assert(!a.disconnected)
-      assert(!b.disconnected)
-
-      s.kill()
-      assert(a.disconnected)
-      assert(b.disconnected)
     })
 
     it("should handle errors from its source signals", function() {
@@ -1294,7 +1299,7 @@ describe("sig", function() {
 
 
   describe(".resolve", function() {
-    it("should put the given value, then kill", function() {
+    it("should put the given value, then die", function() {
       var killed = false
 
       sig()
