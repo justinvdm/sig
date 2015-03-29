@@ -154,9 +154,10 @@
 
   sig.prototype.kill = function() {
     emit(this, 'kill')
-    disconnect(this)
-    this.killed = true
     propagate(this, {type: 'kill'})
+    disconnect(this)
+    clear(this)
+    this.killed = true
     return this
   }
 
@@ -170,6 +171,7 @@
 
 
   sig.prototype.put = function(v) {
+    if (this.killed) throw new Error('.put() used on a dead signal')
     if (this.sticky) this.current = v
 
     propagate(this, {
@@ -202,6 +204,7 @@
 
 
   sig.prototype.throw = function(e) {
+    if (this.killed) throw new Error('.throw() used on a dead signal')
     if (!this.targets.length) throw(e)
 
     propagate(this, {
@@ -504,6 +507,13 @@
     s.isDependant = true
     on(t, 'disconnect', disconnect, s)
     return s
+  }
+
+
+  function clear(s) {
+    s.source = null
+    s.targets = []
+    s.inBuffer = []
   }
 
 

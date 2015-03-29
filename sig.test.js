@@ -44,189 +44,6 @@ describe("sig", function() {
     assert.deepEqual(results, [2, 4])
   })
 
-  it("should support top-down disconnects", function() {
-    var a = sig()
-    var b = sig()
-    var c = sig()
-    var d = sig()
-    var e = sig()
-
-    a.then(b)
-    b.then(c)
-    b.then(d)
-    //       a
-    //       |
-    //       v
-    //  ---- b      
-    // |     |
-    // v     v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(!c.disconnected)
-    assert(!d.disconnected)
-    assert(!e.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.strictEqual(b.source, a)
-    assert.deepEqual(b.targets, [c, d])
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-
-    a.kill()
-    //       a
-    //        
-    //        
-    //       b      
-    //        
-    //        
-    // c     d     e
-    assert(a.disconnected)
-    assert(b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-    assert(!e.disconnected)
-    assert(!a.targets.length)
-    assert.strictEqual(b.source, a)
-    assert(!b.targets.length)
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-
-    b.then(e)
-    //       a
-    //       |
-    //       v
-    //       b ----
-    //             |
-    //             v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-    assert(!e.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.strictEqual(b.source, a)
-    assert.deepEqual(b.targets, [e])
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-    assert.strictEqual(e.source, b)
-  })
-
-  it("should support bottom-up disconnects", function() {
-    var a = sig()
-    var b = sig()
-    var c = sig()
-    var d = sig()
-    var e = sig()
-
-    a.then(b)
-    b.then(c)
-    b.then(d)
-    //       a
-    //       |
-    //       v
-    //  ---- b      
-    // |     |
-    // v     v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(!c.disconnected)
-    assert(!d.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.deepEqual(b.source, a)
-    assert.deepEqual(b.targets, [c, d])
-    assert.deepEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-
-    c.kill()
-    //       a
-    //       |
-    //       v
-    //       b      
-    //       |
-    //       v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(c.disconnected)
-    assert(!d.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.strictEqual(b.source, a)
-    assert.deepEqual(b.targets, [d])
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-
-    d.kill()
-    //       a
-    //        
-    //        
-    //       b      
-    //        
-    //        
-    // c     d     e
-    assert(a.disconnected)
-    assert(b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-    assert(!a.targets.length)
-    assert.strictEqual(b.source, a)
-    assert(!b.targets.length)
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-
-    b.then(e)
-    //       a
-    //       |
-    //       v
-    //       b ----
-    //             |
-    //             v
-    // c     d     e
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-    assert.deepEqual(a.targets, [b])
-    assert.strictEqual(b.source, a)
-    assert.deepEqual(b.targets, [e])
-    assert.strictEqual(c.source, b)
-    assert.strictEqual(d.source, b)
-    assert.strictEqual(e.source, b)
-  })
-
-  it("should support signal killing", function() {
-    var a = sig()
-    var b = sig()
-    var c = sig()
-    var d = sig()
-    var cValues = capture(c)
-    var dValues = capture(d)
-
-    a.then(b)
-    b.then(c)
-    b.then(d)
-
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(!c.disconnected)
-    assert(!d.disconnected)
-    assert(!cValues.length)
-    assert(!dValues.length)
-
-    b.put(1)
-     .put(2)
-     .put(3)
-     .kill()
-
-    assert(a.disconnected)
-    assert(b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-    assert.deepEqual(cValues, [1, 2, 3])
-    assert.deepEqual(dValues, [1, 2, 3])
-  })
-
   it("should support signal pausing and resuming", function() {
     var results = []
     var s = sig()
@@ -313,62 +130,6 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it("should allow a target signal to kill", function() {
-    var a = sig()
-    var b = sig()
-    var results = capture(b)
-    a.then(b)
-
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-
-    a.put(1)
-     .put(2)
-     .put(3)
-
-    b.kill()
-
-    assert(a.disconnected)
-    assert(b.disconnected)
-
-    a.put(4)
-    assert.deepEqual(results, [1, 2, 3])
-  })
-
-  it("should allow a source signal to kill", function() {
-    var a = sig()
-    var b = sig()
-    var c = sig()
-    var d = sig()
-    var cValues = capture(c)
-    var dValues = capture(d)
-
-    a.then(b)
-    b.then(c)
-    b.then(d)
-
-    assert(!a.disconnected)
-    assert(!b.disconnected)
-    assert(!c.disconnected)
-    assert(!d.disconnected)
-    assert(!cValues.length)
-    assert(!dValues.length)
-
-    b.put(1)
-     .put(2)
-     .put(3)
-     .kill()
-
-    assert(a.disconnected)
-    assert(b.disconnected)
-    assert(c.disconnected)
-    assert(d.disconnected)
-
-    b.put(4)
-    assert.deepEqual(cValues, [1, 2, 3])
-    assert.deepEqual(dValues, [1, 2, 3])
-  })
-
   it("should act as an indentity for existing signals", function() {
     var s = sig()
     assert.strictEqual(sig(s), s)
@@ -380,6 +141,155 @@ describe("sig", function() {
 
     sig([1, 2, 3, 4])
       .call(capture, assert.deepEqual, [1, 2, 3, 4])
+  })
+
+
+  describe("killing", function() {
+    it("should mark the signal as killed", function() {
+      var s = sig()
+      assert(!s.killed)
+      s.kill()
+      assert(s.killed)
+    })
+
+    it("should clear the signal's state", function() {
+      var a = sig()
+      var b = a.then(function(){})
+      var c = b.then(sig())
+
+      a.put(21)
+       .put(23)
+
+      assert.strictEqual(b.source, a)
+      assert.deepEqual(b.targets, [c])
+      assert(b.inBuffer.length)
+
+      b.kill()
+      assert.strictEqual(b.source, null)
+      assert(!b.targets.length)
+      assert(!b.inBuffer.length)
+    })
+
+    it("should kill its targets", function() {
+      var a = sig()
+      var b = a.then(sig())
+      var c = b.then(sig())
+      var d = b.then(sig())
+
+      assert(!a.killed)
+      assert(!b.killed)
+      assert(!c.killed)
+      assert(!d.killed)
+
+      a.kill()
+      assert(a.killed)
+      assert(b.killed)
+      assert(c.killed)
+      assert(d.killed)
+    })
+
+    it("should disconnect the signal", function() {
+      var a = sig()
+      var b = sig()
+      var c = sig()
+      var d = sig()
+      var e = sig()
+
+      a.then(b)
+      b.then(c)
+      b.then(d)
+      //       a
+      //       |
+      //       v
+      //  ---- b      
+      // |     |
+      // v     v
+      // c     d     e
+      assert(!a.disconnected)
+      assert(!b.disconnected)
+      assert(!c.disconnected)
+      assert(!d.disconnected)
+      assert.deepEqual(a.targets, [b])
+      assert.deepEqual(b.source, a)
+      assert.deepEqual(b.targets, [c, d])
+      assert.deepEqual(c.source, b)
+      assert.strictEqual(d.source, b)
+
+      c.kill()
+      //       a
+      //       |
+      //       v
+      //       b      
+      //       |
+      //       v
+      // c     d     e
+      assert(!a.disconnected)
+      assert(!b.disconnected)
+      assert(c.disconnected)
+      assert(!d.disconnected)
+      assert.deepEqual(a.targets, [b])
+      assert.strictEqual(b.source, a)
+      assert.deepEqual(b.targets, [d])
+      assert.strictEqual(c.source, null)
+      assert.strictEqual(d.source, b)
+
+      d.kill()
+      //       a
+      //        
+      //        
+      //       b      
+      //        
+      //        
+      // c     d     e
+      assert(a.disconnected)
+      assert(b.disconnected)
+      assert(c.disconnected)
+      assert(d.disconnected)
+      assert(!a.targets.length)
+      assert.strictEqual(b.source, a)
+      assert(!b.targets.length)
+      assert.strictEqual(c.source, null)
+      assert.strictEqual(d.source, null)
+
+      b.then(e)
+      //       a
+      //       |
+      //       v
+      //       b ----
+      //             |
+      //             v
+      // c     d     e
+      assert(!a.disconnected)
+      assert(!b.disconnected)
+      assert(c.disconnected)
+      assert(d.disconnected)
+      assert.deepEqual(a.targets, [b])
+      assert.strictEqual(b.source, a)
+      assert.deepEqual(b.targets, [e])
+      assert.strictEqual(c.source, null)
+      assert.strictEqual(d.source, null)
+      assert.strictEqual(e.source, b)
+    })
+
+    it("should throw an error if .put() is used on a dead signal", function() {
+      function thrower() {
+        sig()
+          .kill()
+          .put(23)
+      }
+
+      assert.throws(thrower, /.put\(\) used on a dead signal/)
+    })
+
+    it("should throw an error if .throw() is used on a dead signal", function() {
+      function thrower() {
+        sig()
+          .kill()
+          .throw(new Error(':/'))
+      }
+
+      assert.throws(thrower, /.throw\(\) used on a dead signal/)
+    })
   })
 
 
