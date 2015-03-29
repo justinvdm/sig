@@ -430,12 +430,8 @@
 
 
   function handle(s, msg) {
-    var fn = 'data' in msg
-      ? handlers[msg.type].bind(null, s, msg.data)
-      : handlers[msg.type].bind(null, s)
-
-    try { fn() }
-    catch(error) { s.throw(error) }
+    if ('data' in msg) handlers[msg.type](s, msg.data)
+    else handlers[msg.type](s)
   }
 
 

@@ -466,24 +466,6 @@ describe("sig", function() {
       s.put()
     })
 
-    it("should handle errors thrown natively in value handlers", function(done) {
-      var s = sig()
-      var t = s.then(sig())
-      var u = t.then(sig())
-      var e = new Error('o_O')
-
-      t.handlers.value = function() {
-        throw e
-      }
-
-      u.handlers.error = function(caughtErr) {
-        assert.strictEqual(caughtErr, e)
-        done()
-      }
-
-      s.put()
-    })
-
     it("should handle errors thrown in error handlers", function(done) {
       var s = sig()
       var t = s.then(sig())
@@ -492,24 +474,6 @@ describe("sig", function() {
 
       t.handlers.error = function() {
         this.throw(e)
-      }
-
-      u.handlers.error = function(caughtErr) {
-        assert.strictEqual(caughtErr, e)
-        done()
-      }
-
-      s.throw(new Error(':/'))
-    })
-
-    it("should handle errors thrown natively in error handlers", function(done) {
-      var s = sig()
-      var t = s.then(sig())
-      var u = t.then(sig())
-      var e = new Error('o_O')
-
-      t.handlers.error = function() {
-        throw e
       }
 
       u.handlers.error = function(caughtErr) {
