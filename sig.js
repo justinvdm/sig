@@ -153,14 +153,11 @@
 
 
   sig.prototype.kill = function() {
-    propagate(this, {type: 'kill'})
-
-    // if there are messages in the buffer other than the kill message we just
-    // propagated, we need to wait for a flush before killing can complete
-    if (this.outBuffer.length > 1)
-      on(this, 'flush', finishKill, this)
+    // if there are messages in the buffer, wait for a flush before killing
+    if (this.outBuffer.length)
+      on(this, 'flush', kill, this)
     else
-      finishKill(this)
+      kill(this)
 
     return this
   }
@@ -522,8 +519,9 @@
   }
 
 
-  function finishKill(s) {
+  function kill(s) {
     emit(s, 'kill')
+    propagate(s, {type: 'kill'})
     disconnect(s)
     clear(s)
     s.killed = true
