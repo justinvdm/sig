@@ -250,7 +250,7 @@ v.each(sig.log)  // 23
 ## api
 
 <a name="sig"></a>
-####`sig()`
+#### `sig()`
 
 Creates a new signal.
 
@@ -1026,12 +1026,14 @@ sig.isSig(sig())  // => true
 Logs the given arguments. Similar to `console.log`, except it does not rely on `console` as its `this` context and returns its first argument.
 
 ```javascript
-sig([0, 1, 1, 0])
-  .filter()
-  .map(sig.log)
-  .map(function(v) { return v * 2 })
-  .each(sig.log)
+var s = sig()
 
+s.filter()
+ .map(sig.log)
+ .map(function(v) { return v * 2 })
+ .each(sig.log)
+
+s.putEach([0, 1, 1, 0])
 // 1
 // 1
 // 2
