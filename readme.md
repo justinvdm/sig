@@ -297,7 +297,7 @@ Tells the calling signal that it is done processing its most recent value or err
 
 ```javascript
 var s = sig()
-var t = s.each(sig.log)
+var t = s.then(sig.log)
 
 s.put(1)  // 1
  .put(2)
