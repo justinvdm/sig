@@ -642,10 +642,15 @@ describe("sig", function() {
 
 
   describe(".once", function() {
-    it("should limit a signal to its first output", function() {
-      sig([1, 2, 3, 4, 5, 6])
-        .once()
-        .call(capture, assert.deepEqual, [1])
+    it("should limit a signal to its first output", function(done) {
+      var s = sig()
+
+      s.once()
+       .call(sink, assert.deepEqual, [1])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4, 5, 6])
+       .end()
     })
 
     it("should end the signal chain after outputting a value", function() {
@@ -757,21 +762,22 @@ describe("sig", function() {
 
   describe(".all", function() {
     it("should support arrays with only non signals", function() {
-      sig.all([21, 22, 23])
-       .call(capture, assert.deepEqual, [[21, 22, 23]])
+      var s = sig.all([21, 22, 23])
+      assert.deepEqual(capture(s), [[21, 22, 23]])
     })
 
     it("should support objects with only non signals", function() {
-      sig.all({
-           a: 21,
-           b: 22,
-           c: 23
-        })
-        .call(capture, assert.deepEqual, [{
-            a: 21,
-            b: 22,
-            c: 23
-        }])
+      var s = sig.all({
+        a: 21,
+        b: 22,
+        c: 23
+      })
+
+      assert.deepEqual(capture(s), [{
+        a: 21,
+        b: 22,
+        c: 23
+      }])
     })
 
     it("should support arrays with both signals and non-signals", function() {
