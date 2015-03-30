@@ -283,7 +283,7 @@ Puts the value `v` through the signal, where `v` can be a value of any type.
 
 ```javascript
 var s = sig()
-s.then(sig.log)
+s.each(sig.log)
 
 s.put(21)  // 21
  .put(21)  // 23
@@ -297,7 +297,7 @@ Tells the calling signal that it is done processing its most recent value or err
 
 ```javascript
 var s = sig()
-var t = sig.then(sig.log)
+var t = s.each(sig.log)
 
 s.put(1)  // 1
  .put(2)
@@ -841,7 +841,7 @@ If a `v` is given, a sticky signal is returned with `v` as its initial value. If
 
 ```javascript
 var v = sig.ensureVal(23)
-v.then(sig.log)  // 23
+v.each(sig.log)  // 23
 
 var s = sig()
 var t = sig.ensureVal(s)
@@ -999,7 +999,7 @@ sig.merge({
     b: 23,
     c: t
   })
-  .then(sig.log)
+  .each(sig.log)
 
 s.put(1)  // 1
 t.put(3)  // 3
