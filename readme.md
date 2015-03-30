@@ -242,7 +242,7 @@ Sometimes, a signal needs to hold onto the last value it has sent out. When new 
 Sticky signals can be created using [`val`](#val).
 
 ```javascript
-var v = val(23)
+var v = sig.val(23)
 v.each(sig.log)  // 23
 v.each(sig.log)  // 23
 ```
