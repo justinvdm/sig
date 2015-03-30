@@ -2,15 +2,24 @@ var sig = require('./sig'),
     assert = require('assert')
 
 
-function capture(s, fn) {
+function capture(s) {
   var results = []
-  fn = sig.prime(sig.slice(arguments, 2), fn || sig.identity)
+  s.each(function(v) { results.push(v) })
+  return results
+}
 
-  s.each(function(v) {
-    results.push(v)
-  })
 
-  return fn(results)
+function sink(s, fn) {
+  var results = []
+  fn = sig.prime(sig.slice(arguments, 2), fn)
+
+  return s
+   .each(function(v) {
+     results.push(v)
+   })
+   .teardown(function() {
+     fn(results)
+   })
 }
 
 
@@ -42,49 +51,6 @@ describe("sig", function() {
 
     src.put(3)
     assert.deepEqual(results, [2, 4])
-  })
-
-  it("should support signal pausing and resuming", function() {
-    var results = []
-    var s = sig()
-    var t = sig()
-    var u = sig()
-
-    u.handlers.value = function(v) {
-      results.push(v)
-      this.next()
-    }
-
-    s.then(t)
-     .then(u)
-
-    s.pause()
-    t.pause()
-
-    s.put(1)
-    assert(!results.length)
-
-    s.resume()
-    assert(!results.length)
-
-    t.resume()
-    assert.deepEqual(results, [1])
-
-    s.put(2)
-    assert.deepEqual(results, [1, 2])
-
-    t.pause()
-    s.put(3)
-    assert.deepEqual(results, [1, 2])
-
-    t.resume()
-    assert.deepEqual(results, [1, 2, 3])
-
-    s.pause()
-    s.put(4)
-
-    s.resume()
-    assert.deepEqual(results, [1, 2, 3, 4])
   })
 
   it("should not allow multiple source signals", function() {
@@ -121,35 +87,17 @@ describe("sig", function() {
     s.then(t1)
     s.then(t2)
 
-    s.put(1)
-     .put(2)
-     .put(3)
-     .put(4)
-
+    s.putEach([1, 2, 3, 4])
     assert.deepEqual(results1, [1, 2, 3, 4])
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it("should act as an indentity for existing signals", function() {
-    var s = sig()
-    assert.strictEqual(sig(s), s)
-  })
-
-  it("should create a signal from an array of values", function() {
-    sig([23])
-      .call(capture, assert.deepEqual, [23])
-
-    sig([1, 2, 3, 4])
-      .call(capture, assert.deepEqual, [1, 2, 3, 4])
-  })
-
-
-  describe("killing", function() {
-    it("should mark the signal as killed", function() {
+  describe("ending", function() {
+    it("should mark the signal as ended", function() {
       var s = sig()
-      assert(!s.killed)
-      s.kill()
-      assert(s.killed)
+      assert(!s.ended)
+      s.end()
+      assert(s.ended)
     })
 
     it("should clear the signal's state", function() {
@@ -164,28 +112,28 @@ describe("sig", function() {
       assert.deepEqual(b.targets, [c])
       assert(b.inBuffer.length)
 
-      b.kill()
+      b.end()
       assert.strictEqual(b.source, null)
       assert(!b.targets.length)
       assert(!b.inBuffer.length)
     })
 
-    it("should kill its targets", function() {
+    it("should end its targets", function() {
       var a = sig()
       var b = a.then(sig())
       var c = b.then(sig())
       var d = b.then(sig())
 
-      assert(!a.killed)
-      assert(!b.killed)
-      assert(!c.killed)
-      assert(!d.killed)
+      assert(!a.ended)
+      assert(!b.ended)
+      assert(!c.ended)
+      assert(!d.ended)
 
-      a.kill()
-      assert(a.killed)
-      assert(b.killed)
-      assert(c.killed)
-      assert(d.killed)
+      a.end()
+      assert(a.ended)
+      assert(b.ended)
+      assert(c.ended)
+      assert(d.ended)
     })
 
     it("should disconnect the signal", function() {
@@ -215,7 +163,7 @@ describe("sig", function() {
       assert.deepEqual(c.source, b)
       assert.strictEqual(d.source, b)
 
-      c.kill()
+      c.end()
       //       a
       //       |
       //       v
@@ -233,7 +181,7 @@ describe("sig", function() {
       assert.strictEqual(c.source, null)
       assert.strictEqual(d.source, b)
 
-      d.kill()
+      d.end()
       //       a
       //        
       //        
@@ -278,10 +226,10 @@ describe("sig", function() {
       var results = capture(b)
 
       a.targets = [b]
-      a.resume().put(21)
+      a.put(21)
       assert.deepEqual(results, [21])
 
-      a.kill()
+      a.end()
       results = capture(c)
       a.targets = [c]
       a.put(23)
@@ -300,10 +248,10 @@ describe("sig", function() {
 
       results = capture(b)
       a.targets = [b]
-      a.resume().put(21)
+      a.put(21)
       assert.deepEqual(results, [21])
 
-      a.kill()
+      a.end()
 
       results = capture(c)
       a.targets = [c]
@@ -312,7 +260,7 @@ describe("sig", function() {
     })
 
     it("should not allow targets to be added to dead signals", function() {
-      var a = sig().kill()
+      var a = sig().end()
       var b = a.then(sig())
       var c = a.then(function(){})
       assert(!a.targets.length)
@@ -425,26 +373,6 @@ describe("sig", function() {
   })
 
 
-  describe("eager signals", function() {
-    it("should resume when the first target is added", function() {
-      var s = sig()
-      s.eager = true
-
-      assert(s.paused)
-      var t = s.then(sig())
-      assert(!s.paused)
-
-      s.pause()
-      s.then(sig())
-      assert(s.paused)
-
-      t.kill()
-      s.then(sig())
-      assert(s.paused)
-    })
-  })
-
-
   describe(".then", function() {
     it("should support connecting to an existing target", function() {
       var s = sig()
@@ -507,7 +435,7 @@ describe("sig", function() {
 
 
   describe(".teardown", function() {
-    it("should call the function when a signal is killed", function() {
+    it("should call the function when a signal is ended", function() {
       var s = sig()
       var run = false
 
@@ -517,12 +445,12 @@ describe("sig", function() {
       })
 
       assert(!run)
-      s.kill()
+      s.end()
       assert(run)
     })
 
     it("should get called immediately if the signal is dead", function() {
-      var s = sig().kill()
+      var s = sig().end()
       var run = false
 
       s.teardown(function() {
@@ -536,104 +464,155 @@ describe("sig", function() {
 
 
   describe(".each", function() {
-    it("should process each value given by the signal", function() {
-      sig([1, 2, 3, 4])
-        .each(function(x) { this.put(x * 2) })
-        .each(function(x) { this.put(x + 1) })
-        .call(capture, assert.deepEqual, [3, 5, 7, 9])
+    it("should process each value given by the signal", function(done) {
+      var s = sig()
+
+      s.each(function(x) { this.put(x * 2) })
+       .each(function(x) { this.put(x + 1) })
+       .call(sink, assert.deepEqual, [3, 5, 7, 9])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
     })
 
-    it("should allow additional args", function() {
+    it("should allow additional args", function(done) {
       function fn(a, b, c) {
         this.put([a, b, c])
       }
 
-      return sig([1, 2, 3, 4])
-        .each(fn, 23, 32)
-        .call(capture, assert.deepEqual, [
+      var s = sig()
+
+      s.each(fn, 23, 32)
+       .call(sink, assert.deepEqual, [
           [1, 23, 32],
           [2, 23, 32],
           [3, 23, 32],
           [4, 23, 32]
         ])
+        .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
     })
   })
 
   
   describe(".map", function() {
-    it("should map the given signal", function() {
-      sig([1, 2, 3, 4])
-        .map(function(x) { return x * 2 })
-        .map(function(x) { return x + 1 })
-        .call(capture, assert.deepEqual, [3, 5, 7, 9])
+    it("should map the given signal", function(done) {
+      var s = sig()
+
+      s.map(function(x) { return x * 2 })
+       .map(function(x) { return x + 1 })
+       .call(sink, assert.deepEqual, [3, 5, 7, 9])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
     })
 
-    it("should allow non-function values to be given", function() {
-      sig([1, 2, 3, 4])
-        .map(23)
-        .call(capture, assert.deepEqual, [23, 23, 23, 23])
+    it("should allow non-function values to be given", function(done) {
+      var s = sig()
+
+      s.map(23)
+       .call(sink, assert.deepEqual, [23, 23, 23, 23])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
     })
 
-    it("should allow additional args", function() {
+    it("should allow additional args", function(done) {
       function fn(a, b, c) {
         return [a, b, c]
       }
 
-      return sig([1, 2, 3, 4])
-        .map(fn, 23, 32)
-        .call(capture, assert.deepEqual, [
-          [1, 23, 32],
-          [2, 23, 32],
-          [3, 23, 32],
-          [4, 23, 32]
-        ])
+      var s = sig()
+
+      s.map(fn, 23, 32)
+       .call(sink, assert.deepEqual, [
+         [1, 23, 32],
+         [2, 23, 32],
+         [3, 23, 32],
+         [4, 23, 32]
+       ])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
     })
   })
 
 
   describe(".filter", function() {
-    it("should filter the given signal", function() {
-      sig([2, 3, 4, 5, 6, 11, 12, 15, 16])
-        .filter(function(x) { return x % 2 })
-        .filter(function(x) { return x < 10 })
-        .call(capture, assert.deepEqual, [3, 5])
+    it("should filter the given signal", function(done) {
+      var s = sig()
+
+      s.filter(function(x) { return x % 2 })
+       .filter(function(x) { return x < 10 })
+       .call(sink, assert.deepEqual, [3, 5])
+       .teardown(done)
+
+      s.putEach([2, 3, 4, 5, 6, 11, 12, 15, 16])
+       .end()
     })
 
-    it("should allow additional args", function() {
+    it("should allow additional args", function(done) {
+      var s = sig()
+
+      s.filter(fn, 3, 2)
+       .call(sink, assert.deepEqual, [1, 3])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4])
+       .end()
+
       function fn(a, b, c) {
         return (a * b) % c
       }
-
-      sig([1, 2, 3, 4])
-        .filter(fn, 3, 2)
-        .call(capture, assert.deepEqual, [1, 3])
     })
 
-    it("should default to an identity function", function() {
-      sig([1, 0, 3, null])
-        .filter()
-        .call(capture, assert.deepEqual, [1, 3])
+    it("should default to an identity function", function(done) {
+      var s = sig()
+
+      s.filter()
+       .call(sink, assert.deepEqual, [1, 3])
+       .teardown(done)
+
+      s.putEach([1, 0, 3, null])
+       .end()
     })
   })
 
 
   describe(".flatten", function() {
-    it("should flatten the given signal", function() {
-      sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
-        .flatten()
-        .call(capture, assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    it("should flatten the given signal", function(done) {
+      var s = sig()
+
+      s.flatten()
+       .limit(10)
+       .call(sink, assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+       .teardown(done)
+
+      s.putEach([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
+       .end()
     })
   })
 
 
   describe(".limit", function() {
-    it("should limit the given signal", function() {
-      sig([1, 2, 3, 4, 5, 6])
-        .limit(3)
-        .call(capture, assert.deepEqual, [1, 2, 3])
+    it("should limit the given signal", function(done) {
+      var s = sig()
+
+      s.limit(3)
+       .call(sink, assert.deepEqual, [1, 2, 3])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4, 5, 6])
+       .end()
     })
 
-    it("should kill the signal chain once the limit is reached", function() {
+    it("should end the signal chain once the limit is reached", function() {
       var s = sig()
       s.limit(3).then(sig())
 
@@ -649,10 +628,15 @@ describe("sig", function() {
       assert(s.disconnected)
     })
 
-    it("should not output anything if the limit is 0", function() {
-      sig([1, 2, 3, 4, 5, 6])
-        .limit(0)
-        .call(capture, assert.deepEqual, [])
+    it("should not output anything if the limit is 0", function(done) {
+      var s = sig()
+
+      s.limit(0)
+       .call(sink, assert.deepEqual, [])
+       .teardown(done)
+
+      s.putEach([1, 2, 3, 4, 5, 6])
+       .end()
     })
   })
 
@@ -664,7 +648,7 @@ describe("sig", function() {
         .call(capture, assert.deepEqual, [1])
     })
 
-    it("should kill the signal chain after outputting a value", function() {
+    it("should end the signal chain after outputting a value", function() {
       var s = sig()
       s.once().then(sig())
 
@@ -701,7 +685,6 @@ describe("sig", function() {
       var a = sig()
       var b = sig()
       var results = capture(sig.any([a, b, 23]))
-
       assert(!results.length)
 
       a.put(1)
@@ -767,7 +750,7 @@ describe("sig", function() {
           .call(capture, assert.deepEqual, [[1, 0], [2, 1]])
       }
 
-      test(sig.ensure(1), sig.ensure(2))
+      test(sig.ensureVal(1), sig.ensureVal(2))
     })
   })
 
@@ -896,17 +879,6 @@ describe("sig", function() {
       assert.notStrictEqual(results[2], results[0])
     })
 
-    it("should work with signals with non-empty buffers", function() {
-      var a = sig()
-      a.put(1)
-
-      var b = sig()
-      b.put(2)
-
-      sig.all([a, b])
-        .call(capture, assert.deepEqual, [[1, 2]])
-    })
-
     it("should handle errors from its source signals", function() {
       var results = []
       var a = sig()
@@ -999,7 +971,7 @@ describe("sig", function() {
           .call(capture, assert.deepEqual, [1, 2])
       }
 
-      test(sig.ensure(1), sig.ensure(2))
+      test(sig.ensureVal(1), sig.ensureVal(2))
     })
   })
 
@@ -1016,22 +988,13 @@ describe("sig", function() {
 
       var t = sig()
       s.put(t)
-
-      t.put(1)
-       .put(2)
-       .put(3)
+      t.putEach([1, 2, 3])
 
       var u = sig()
       s.put(u)
 
-      u.put(4)
-       .put(5)
-       .put(6)
-
-      t.put(7)
-       .put(8)
-       .put(9)
-
+      u.putEach([4, 5, 6])
+      t.putEach([7, 8, 9])
       assert.deepEqual(results, [2, 4, 6, 8, 10, 12])
     })
 
@@ -1176,22 +1139,6 @@ describe("sig", function() {
   })
 
 
-  describe(".ensure", function() {
-    it("should simply pass through existing signals", function() {
-      sig.ensure(sig([1, 2]))
-        .call(capture, assert.deepEqual, [1, 2])
-    })
-
-    it("should create a singleton signal from non-signals", function() {
-      sig.ensure(23)
-        .call(capture, assert.deepEqual, [23])
-
-      sig.ensure([[1, 2], [3, 4]])
-        .call(capture, assert.deepEqual, [[[1, 2], [3, 4]]])
-    })
-  })
-
-
   describe(".val", function() {
     it("should hold last value given to the signal", function() {
       var s = sig.val(2)
@@ -1204,32 +1151,22 @@ describe("sig", function() {
       s.put(4)
       assert.deepEqual(results, [2, 3, 4])
     })
-
-    it("should work for eager signals", function() {
-      var s = sig.val(2)
-      s.eager = true
-      assert.deepEqual(s.call(capture), [2])
-    })
-
-    it("should work for non-eager signals", function() {
-      var s = sig.val(2)
-      s.eager = false
-      s.resume()
-      assert.deepEqual(s.call(capture), [2])
-    })
   })
 
 
   describe(".ensureVal", function() {
-    it("should turn values into sticky signals", function() {
+    it("should return a sticky signal if a value is given", function() {
       sig.ensureVal(23)
         .call(capture, assert.deepEqual, [23])
     })
 
-    it("should turn signals into sticky signals", function() {
-      var s = sig.ensureVal(sig([23]))
-      s.call(capture, assert.deepEqual, [23])
-      s.call(capture, assert.deepEqual, [23])
+    it("should return sticky target signal if a signal is given", function() {
+      var s = sig()
+      var t = sig.ensureVal(s)
+      s.put(23)
+
+      t.call(capture, assert.deepEqual, [23])
+      t.call(capture, assert.deepEqual, [23])
     })
   })
 
@@ -1263,7 +1200,7 @@ describe("sig", function() {
       s.throw(e)
     })
 
-    it("should not redirect after the target has been killed", function() {
+    it("should not redirect after the target has been ended", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
@@ -1276,7 +1213,7 @@ describe("sig", function() {
 
       assert.deepEqual(results, [1, 2, 3])
 
-      t.kill()
+      t.end()
 
       s.put(4)
        .put(5)
@@ -1290,24 +1227,25 @@ describe("sig", function() {
   describe(".to", function() {
     it("should put the given value onto the given signal", function() {
       var s = sig()
+      var results = capture(s)
       sig.to(1, s)
       sig.to(2, s)
       sig.to(3, s)
-      assert.deepEqual(capture(s), [1, 2, 3])
+      assert.deepEqual(results, [1, 2, 3])
     })
   })
 
 
   describe(".resolve", function() {
     it("should put the given value, then die", function() {
-      var killed = false
+      var ended = false
 
       sig()
-        .teardown(function() { killed = true })
+        .teardown(function() { ended = true })
         .resolve(23)
         .call(capture, assert.deepEqual, [23])
 
-      assert(killed)
+      assert(ended)
     })
   })
 

@@ -6,9 +6,7 @@
   var _log = console.log
 
 
-  function sig(obj) {
-    if (sig.isSig(obj)) return obj
-
+  function sig() {
     var s = new Sig()
     s.targets = []
     s.source = null
@@ -17,17 +15,12 @@
     s.handlers.error = throwNextHandler
     s.current = _nil_
     s.inBuffer = []
-    s.outBuffer = []
     s.eventListeners = {}
-    s.eager = true
     s.sticky = false
     s.waiting = true
-    s.killed = false
-    s.paused = true
+    s.ended = false
     s.disconnected = false
     s.isDependant = false
-
-    if (obj) s.putMany(obj)
     return s
   }
 
@@ -40,13 +33,6 @@
   }
 
 
-  sig.ensure = function(v) {
-    return !sig.isSig(v)
-      ? sig([v])
-      : v
-  }
-
-
   sig.ensureVal = function(v) {
     return sig.isSig(v)
       ? v.then(sig.val())
@@ -56,12 +42,16 @@
 
   sig.any = function(values) {
     if (isArguments(values)) values = sig.slice(values)
+    var s = sig()
 
-    return sig(pairs(values))
-      .filter(sig.spread, sig.isSig)
-      .each(sig.spread, function(s, k) {
-        s.map(identityAll, k).redir(this)
-      })
+    var t = s
+     .filter(sig.spread, sig.isSig)
+     .each(sig.spread, function(u, k) {
+       u.map(identityAll, k).redir(this)
+     })
+
+    s.putEach(pairs(values))
+    return t
   }
 
 
@@ -152,30 +142,29 @@
   }
 
 
-  sig.prototype.kill = function() {
-    // if there are messages in the buffer, wait for a flush before killing
-    if (this.outBuffer.length)
-      on(this, 'flush', kill, this)
-    else
-      kill(this)
-
+  sig.prototype.end = function() {
+    send(this, {type: 'end'})
+    emit(this, 'end')
+    disconnect(this)
+    clear(this)
+    this.ended = true
     return this
   }
 
 
   sig.prototype.teardown = function(fn) {
     fn = sig.prime(sig.slice(arguments, 1), fn)
-    if (this.killed) fn.call(this)
-    else on(this, 'kill', fn)
+    if (this.ended) fn.call(this)
+    else on(this, 'end', fn)
     return this
   }
 
 
   sig.prototype.put = function(v) {
-    if (this.killed) return this
+    if (this.ended) return this
     if (this.sticky) this.current = v
 
-    propagate(this, {
+    send(this, {
       type: 'value',
       data: v
     })
@@ -191,24 +180,11 @@
   }
 
 
-  sig.prototype.pause = function() {
-    this.paused = true
-    return this
-  }
-
-
-  sig.prototype.resume = function() {
-    this.paused = false
-    flush(this)
-    return this
-  }
-
-
   sig.prototype.throw = function(e) {
-    if (this.killed) return this
+    if (this.ended) return this
     if (!this.targets.length) throw e
 
-    propagate(this, {
+    send(this, {
       type: 'error',
       data: e
     })
@@ -274,7 +250,7 @@
     
     return this.each(function(v) {
       if (++i <= n) this.put(v)
-      if (i >= n) this.kill()
+      if (i >= n) this.end()
     })
   }
 
@@ -296,12 +272,12 @@
 
 
   sig.prototype.resolve = function(v) {
-    this.put(v).kill()
+    this.put(v).end()
     return this
   }
 
 
-  sig.prototype.putMany = function(values) {
+  sig.prototype.putEach = function(values) {
     var n = values.length
     var i = -1
     while (++i < n) this.put(values[i])
@@ -320,7 +296,7 @@
     fn = sig.prime(sig.slice(arguments, 1), fn || sig.identity)
 
     return this.each(function(v) {
-      if (curr) curr.kill()
+      if (curr) curr.end()
       var u = fn(v)
       if (sig.isSig(u)) curr = u.redir(this)
     })
@@ -347,8 +323,8 @@
   var handlers = {}
 
 
-  handlers.kill = function(s) {
-    s.kill()
+  handlers.end = function(s) {
+    s.end()
   }
 
 
@@ -373,13 +349,10 @@
 
 
   function connect(s, t) {
-    var firstTarget = !s.targets.length
-
     setSource(t, s)
     addTarget(s, t)
 
     if (s.disconnected) reconnect(s)
-    if (s.eager && firstTarget) s.resume()
     else if (s.sticky && s.current != _nil_) receive(t, {
       type: 'value',
       data: s.current
@@ -448,28 +421,11 @@
   }
 
 
-  function propagate(s, msg) {
-    // errors are a special case, force sending
-    if (s.paused && msg.type != 'error') s.outBuffer.push(msg)
-    else send(s, msg)
-  }
-
-
   function send(s, msg) {
     var targets = sig.slice(s.targets)
     var i = -1
     var n = targets.length
     while (++i < n) receive(targets[i], msg)
-  }
-
-
-  function flush(s) {
-    var buffer = s.outBuffer
-    var i = -1
-    var n = buffer.length
-    while (++i < n) send(s, buffer[i])
-    s.outBuffer = []
-    emit(s, 'flush')
   }
 
 
@@ -482,7 +438,7 @@
 
 
   function thenSig(s, t) {
-    if (!s.killed) connect(s, t)
+    if (!s.ended) connect(s, t)
     return t
   }
 
@@ -515,16 +471,6 @@
     s.source = null
     s.targets = []
     s.inBuffer = []
-    s.outBuffer = []
-  }
-
-
-  function kill(s) {
-    emit(s, 'kill')
-    propagate(s, {type: 'kill'})
-    disconnect(s)
-    clear(s)
-    s.killed = true
   }
 
 
@@ -593,12 +539,10 @@
 
   sig.put = sig.static(sig.prototype.put)
   sig.next = sig.static(sig.prototype.next)
-  sig.kill = sig.static(sig.prototype.kill)
+  sig.end = sig.static(sig.prototype.end)
   sig.resolve = sig.static(sig.prototype.resolve)
-  sig.putMany = sig.static(sig.prototype.putMany)
+  sig.putEach = sig.static(sig.prototype.putEach)
   sig.receive = sig.static(sig.prototype.receive)
-  sig.pause = sig.static(sig.prototype.pause)
-  sig.resume = sig.static(sig.prototype.resume)
   sig.throw = sig.static(sig.prototype.throw)
   sig.catch = sig.static(sig.prototype.catch)
   sig.teardown = sig.static(sig.prototype.teardown)
