@@ -113,11 +113,11 @@ s.put(21)  // 21
  .put(23)  // 23
 ```
 
-If an error has put the signal into a state it cannot recover from, [`.kill()`](#kill) can be used to kill the signal.
+If an error has put the signal into a state it cannot recover from, [`.end()`](#end) can be used to end the signal.
 
 ```javascript
 var s = sig()
-  .catch(function() { this.kill() })
+  .catch(function() { this.end() })
 ```
 
 Errors that reach the end of a chain of signals unhandled get rethrown.
@@ -135,58 +135,16 @@ s.throw('o_O')
 
 Note that `.throw()` and `.catch()` should always be used as a way to propagate and handle errors occuring in a chain of signals, as opposed to javascript's native `throw` and `try`-`catch` error handling, since signal processing can occur asynchronously (depending on how sig is being used).
 
-### pausing and resuming
-
-When a signal is paused using [`pause`](#pause), any values given to it by [`put`](#put) are buffered. When the signal is resumed using [`resume`](#resume), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
-
-```javascript
-var s = sig()
-var t = s.then(sig.log)
-
-s.pause()
- .put(21)
- .put(23)
-
-s.resume()
-// 21
-// 23
-```
-
-Note that a paused signal will still propagate errors.
-
-### eager signals
-
-Eager signals are signals that start off paused, but resume after their first target signal is added. Note that signals are eager by default.
-
-```javascript
-var s = sig()
-  .put(21)
-  .put(23)
-
-s.then(sig.log)
-// 21
-// 23
-```
-
-A signal can be set to non-eager by setting the signal's `eager` property to `false`.
-
-```javascript
-var s = sig()
-s.eager = false
-```
-
 ### disposal
 
-When a signal is no longer needed, [`kill`](#kill) should be used. Killing a signal causes the signal to kill each of its targets (and in turn, each target will kill their own targets), [disconnects](#disconnects) the signal from the signal chain and clears the signal's state.
+When a signal is no longer needed, [`end`](#end) should be used. Killing a signal causes the signal to end each of its targets (and in turn, each target will end their own targets), [disconnects](#disconnects) the signal from the signal chain and clears the signal's state.
 
-If the signal has buffered values that still need to propagate, the kill is scheduled until after the buffer has cleared.
-
-Note that creating signals without killing them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
+Note that creating signals without ending them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
 <a name="disconnects"></a>
 ### disconnects
 
-When a signal is killed, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, other signals in the chain cannot be killed, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets, putting the target in a 'disconnected' state. Targets keep a reference to their source, so a signal chain will be reconnected if a new target gets added at the end of the chain.
+When a signal is ended, the chain of signals ending with it (if any) will no longer be sending values to it, so it can be removed from the chain. However, other signals in the chain cannot be ended, as sibling targets (targets with the same source) might still be around listening for new values. To prevent chains of unused target signals being kept in memory as a result of this, source signals forget a target signal when the target no longer has its own targets, putting the target in a 'disconnected' state. Targets keep a reference to their source, so a signal chain will be reconnected if a new target gets added at the end of the chain.
 
 ```javascript
 var a = sig()
@@ -206,7 +164,7 @@ b.then(d)
 // v     v
 // c     d     e
 
-c.kill()
+c.end()
 //       a
 //       |
 //       v
@@ -215,7 +173,7 @@ c.kill()
 //       v
 // c     d     e
 
-d.kill()
+d.end()
 //       a
 //        
 //        
@@ -265,7 +223,7 @@ var logOut = out.each(sig.log)
 a.put(21)  // 21
 b.put(23)  // 23
 
-out.kill()
+out.end()
 
 //   a                  b
 //                      
@@ -292,12 +250,12 @@ v.each(sig.log)  // 23
 ## api
 
 <a name="sig"></a>
-####`sig([values])`
+####`sig()`
 
-Creates a new signal. If a `values` array is given, it is used as the initial values to propagate from the signal.
+Creates a new signal.
 
 ```javascript
-var s = sig([1, 2, 3])
+var s = sig()
 ```
 
 
@@ -305,7 +263,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `next`, `kill`, `resolve`, `putMany`, `receive`, `pause`, `resume`, `throw`, `catch`, `teardown`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `next`, `end`, `resolve`, `putEach`, `receive`, `throw`, `catch`, `teardown`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -331,8 +289,21 @@ s.put(21)  // 21
  .put(21)  // 23
 ```
 
+
 <a name="next"></a>
 ### `.next()`
+
+Tells the calling signal that it is done processing its most recent value or error, if any, and is ready to processing the next value or error.
+
+```javascript
+var s = sig()
+var t = sig.then(sig.log)
+
+s.put(1)  // 1
+ .put(2)
+
+t.next()  // 2
+```
 
 
 <a name="throw"></a>
@@ -347,8 +318,8 @@ s.throw(new Error('o_O'))  // o_O
 ```
 
 
-<a name="kill"></a>
-### `.kill()`
+<a name="end"></a>
+### `.end()`
 
 Kills the given signal.
 
@@ -357,42 +328,9 @@ var s = sig()
 s.each(sig.log)
 
 s.put(21)  // 21
- .kill()
+ .end()
  .put(23)
 ```
-
-
-<a name="pause"></a>
-### `.pause()`
-
-Pauses signal, causing any new values propagating from the signal to get buffered.
-
-```javascript
-var s = sig()
-s.each(sig.log)
-
-s.put(21)  // 21
- .pause()
- .put(23)
- .resume()  // 23
-```
-
-
-<a name="resume"></a>
-### `.resume()`
-
-Resumes the signal, causing the buffered values to propagate to the signal's targets and causing any new values to be sent to the signal's targets.
-
-```javascript
-var s = sig()
-s.each(sig.log)
-
-s.put(21)  // 21
- .pause()
- .put(23)
- .resume()  // 23
-```
-
 
 <a name="then-fn"></a>
 ### `.then(fn[, args...])`
@@ -587,7 +525,7 @@ s.put(0)
 <a name="redir"></a>
 ### `.redir(t)`
 
-Redirects values and errors sent from the calling signal to signal `t`. The returned signal is a new signal that controls this redirection. When either it, `s` or `t` are killed, the redirection ends. `redir` behaves differently to `then`, as it does not set the calling signal as the source of `t`.
+Redirects values and errors sent from the calling signal to signal `t`. The returned signal is a new signal that controls this redirection. When either it, `s` or `t` are ended, the redirection ends. `redir` behaves differently to `then`, as it does not set the calling signal as the source of `t`.
 
 ```javascript
 function join(a, b) {
@@ -613,10 +551,12 @@ b.put(23)  // 23
 Creates and returns a new target signal that outputs each non-array value in a series of possibly nested arrays.
 
 ```javascript
-sig([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
-  .flatten()
-  .each(sig.log)
-  
+var s = sig()
+
+s.flatten()
+ .each(sig.log)
+
+s.putEach([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
 // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
@@ -795,10 +735,13 @@ t.put(7)  // 7
 Calls a function `fn` with the calling signal as its first argument and `args` as the remaining arguments. Useful for hooking custom functions into a signal chain.
 
 ```
-sig([1, 2, 3])
-  .call(mul, 2)
-  .each(sig.log)
+var s = sig()
 
+s.call(mul, 2)
+ .each(sig.log)
+
+
+s.putEach([1, 2, 3])
 // [2, 4, 6]
 
 
@@ -811,7 +754,7 @@ function mul(s, n) {
 <a name="teardown"></a>
 ### `.teardown(fn[, args...])`
 
-Schedules `fn` to be called when the calling signal has been killed. `fn` is called with the calling signal as its `this` context. Any state used by the signal should be deconstructed inside a teardown function. If the calling signal has already been killed, `fn` is called immediately.
+Schedules `fn` to be called when the calling signal has ended. `fn` is called with the calling signal as its `this` context. Any state used by the signal should be deconstructed inside a teardown function. If the calling signal has already ended, `fn` is called immediately.
 
 ```javascript
 function tick() {
@@ -829,13 +772,13 @@ var s = tick()
 var t = s.each(sig.log)
 
 // this will cause the teardown function to get called
-t.kill()
+t.end()
 ```
 
 <a name="resolve"></a>
 ### `.resolve([v])`
 
-Sends the value `v` (or `undefined` if no value is given) from the calling signal, then kills the signal.
+Sends the value `v` (or `undefined` if no value is given) from the calling signal, then ends the signal.
 
 ```javascript
 var s = sig()
@@ -846,8 +789,8 @@ s.resolve(21)  // 21
 ```
 
 
-<a name="putMany"></a>
-### `.putMany()`
+<a name="putEach"></a>
+### `.putEach()`
 
 Sends each value in a `values` array from the calling signal.
 
@@ -855,7 +798,7 @@ Sends each value in a `values` array from the calling signal.
 var s = sig()
 s.each(sig.log)
 
-s.putMany([1, 2, 3])
+s.putEach([1, 2, 3])
 // 1
 // 2
 // 3
@@ -872,8 +815,10 @@ var s = sig()
   .update()
   .each(sig.log)
 
-sig([23])
-  .to(s)  // 23
+var t = sig()
+t.to(s)
+
+t.put(23)  // 23
 ```
 
 
@@ -889,17 +834,6 @@ v.each(sig.log)  // 23
 ```
 
 
-<a name="ensure"></a>
-### `sig.ensure(v)`
-
-If `v` is a signal, it is simply returned. Otherwise, a new signal is created with `v` as its initial value.
-
-```javascript
-var s = sig.ensure(23)
-s.each(sig.log)  // 23
-```
-
-
 <a name="ensure-val"></a>
 ### `sig.ensureVal(v)`
 
@@ -909,9 +843,12 @@ If a `v` is given, a sticky signal is returned with `v` as its initial value. If
 var v = sig.ensureVal(23)
 v.then(sig.log)  // 23
 
-var w = sig.ensureVal(sig([23]))
-w.each(sig.log)  // 23
-w.each(sig.log)  // 23
+var s = sig()
+var t = sig.ensureVal(s)
+
+s.put(23)
+t.each(sig.log)  // 23
+t.each(sig.log)  // 23
 ```
 
 
