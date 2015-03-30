@@ -16,8 +16,9 @@
     s.current = _nil_
     s.inBuffer = []
     s.eventListeners = {}
-    s.sticky = false
+    s.sticky = true
     s.waiting = true
+    s.started = false
     s.ended = false
     s.disconnected = false
     s.isDependant = false
@@ -56,7 +57,7 @@
 
 
   sig.all = function(values) {
-    var out = sig()
+    var out = sig.val()
     var remaining = {}
     values = copy(values)
 
@@ -66,7 +67,7 @@
 
     if (!isEmpty(remaining))
       objEach(values, function(s, k) {
-        if (sig.isSig(s)) s.then(output, k).redir(out)
+        if (sig.isSig(s)) s.each(output, k).redir(out)
       })
     else
       out.put(values)
@@ -77,7 +78,6 @@
       delete remaining[k]
       values[k] = v
       if (isEmpty(remaining)) this.put(copy(values))
-      this.next()
     }
   }
 
