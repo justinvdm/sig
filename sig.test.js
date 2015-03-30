@@ -1200,7 +1200,7 @@ describe("sig", function() {
       s.throw(e)
     })
 
-    it("should not redirect after the target has been ended", function() {
+    it("should not redirect after the target has ended", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
