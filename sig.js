@@ -6,7 +6,7 @@
   var _log = console.log
 
 
-  function sig() {
+  function sig(obj) {
     var s = new Sig()
     s.targets = []
     s.source = null
@@ -15,13 +15,17 @@
     s.handlers.error = throwNextHandler
     s.current = _nil_
     s.inBuffer = []
+    s.outBuffer = []
     s.eventListeners = {}
+    s.paused = true
+    s.started = false
+    s.eager = true
     s.sticky = true
     s.waiting = true
-    s.started = false
     s.ended = false
     s.disconnected = false
     s.isDependant = false
+    if (obj) s.putEach(obj)
     return s
   }
 
@@ -143,11 +147,15 @@
 
 
   sig.prototype.end = function() {
+    var uncleanBuffer = !!this.outBuffer.length
+
     send(this, {type: 'end'})
-    emit(this, 'end')
     disconnect(this)
-    clear(this)
-    this.ended = true
+
+    // if there are messages in the buffer, we need to wait for a flush before
+    // we can end the signal
+    if (uncleanBuffer) on(this, 'flush', finishEnd, this)
+    else finishEnd(this)
     return this
   }
 
@@ -176,6 +184,19 @@
   sig.prototype.next = function() {
     if (!this.inBuffer.length) this.waiting = true
     else handle(this, this.inBuffer.shift())
+    return this
+  }
+
+
+  sig.prototype.pause = function() {
+    this.paused = true
+    return this
+  }
+
+
+  sig.prototype.resume = function() {
+    this.paused = false
+    flush(this)
     return this
   }
 
@@ -349,11 +370,15 @@
 
 
   function connect(s, t) {
+    var started = s.started
     setSource(t, s)
     addTarget(s, t)
+    s.started = true
 
     if (s.disconnected) reconnect(s)
-    else if (s.sticky && s.current != _nil_) receive(t, {
+
+    if (s.eager && !started) s.resume()
+    else if (s.current != _nil_) receive(t, {
       type: 'value',
       data: s.current
     })
@@ -385,6 +410,16 @@
 
     t.disconnected = false
     emit(t, 'reconnect')
+  }
+
+
+  function flush(s) {
+    var buffer = s.outBuffer
+    var i = -1
+    var n = buffer.length
+    while (++i < n) forceSend(s, buffer[i])
+    s.outBuffer = []
+    emit(s, 'flush')
   }
 
 
@@ -422,6 +457,12 @@
 
 
   function send(s, msg) {
+    if (s.paused) s.outBuffer.push(msg)
+    else forceSend(s, msg)
+  }
+
+
+  function forceSend(s, msg) {
     var targets = sig.slice(s.targets)
     var i = -1
     var n = targets.length
@@ -471,6 +512,15 @@
     s.source = null
     s.targets = []
     s.inBuffer = []
+    s.outBuffer = []
+  }
+
+
+  function finishEnd(s) {
+    emit(s, 'end')
+    disconnect(s)
+    clear(s)
+    s.ended = true
   }
 
 

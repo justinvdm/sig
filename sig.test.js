@@ -92,6 +92,72 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
+  it("should allow initial values to be given", function() {
+    assert.deepEqual(capture(sig([1, 2, 3])), [1, 2, 3])
+  })
+
+  describe("pausing and resuming", function() {
+    it("should support signal pausing and resuming", function() {
+      var results = []
+      var s = sig()
+      var t = sig()
+      var u = sig()
+    
+      u.handlers.value = function(v) {
+        results.push(v)
+        this.next()
+      }
+    
+      s.then(t)
+       .then(u)
+    
+      s.pause()
+      t.pause()
+    
+      s.put(1)
+      assert(!results.length)
+    
+      s.resume()
+      assert(!results.length)
+    
+      t.resume()
+      assert.deepEqual(results, [1])
+    
+      s.put(2)
+      assert.deepEqual(results, [1, 2])
+    
+      t.pause()
+      s.put(3)
+      assert.deepEqual(results, [1, 2])
+    
+      t.resume()
+      assert.deepEqual(results, [1, 2, 3])
+    
+      s.pause()
+      s.put(4)
+    
+      s.resume()
+      assert.deepEqual(results, [1, 2, 3, 4])
+    })
+
+    it("should support eager signals", function() {
+      var s = sig()
+      s.eager = true
+    
+      assert(s.paused)
+      var t = s.then(sig())
+      assert(!s.paused)
+    
+      s.pause()
+      s.then(sig())
+      assert(s.paused)
+    
+      t.end()
+      s.then(sig())
+      assert(s.paused)
+    })
+  })
+
   describe("ending", function() {
     it("should mark the signal as ended", function() {
       var s = sig()
@@ -102,8 +168,10 @@ describe("sig", function() {
 
     it("should clear the signal's state", function() {
       var a = sig()
-      var b = a.then(function(){})
+      var b = a.then(function(v){ this.put(v) })
       var c = b.then(sig())
+
+      b.pause()
 
       a.put(21)
        .put(23)
@@ -111,11 +179,13 @@ describe("sig", function() {
       assert.strictEqual(b.source, a)
       assert.deepEqual(b.targets, [c])
       assert(b.inBuffer.length)
+      assert(b.outBuffer.length)
 
-      b.end()
+      b.resume().end()
       assert.strictEqual(b.source, null)
       assert(!b.targets.length)
       assert(!b.inBuffer.length)
+      assert(!b.outBuffer.length)
     })
 
     it("should end its targets", function() {
@@ -219,6 +289,13 @@ describe("sig", function() {
       assert.strictEqual(e.source, b)
     })
 
+    it("should delay signal ending until the buffer is clear", function() {
+      var s = sig([1, 2, 3]).end()
+      assert(!s.ended)
+      s.each(function(){})
+      assert(s.ended)
+    })
+
     it("should not allow values to propagate from dead signals", function() {
       var a = sig()
       var b = sig()
@@ -226,7 +303,7 @@ describe("sig", function() {
       var results = capture(b)
 
       a.targets = [b]
-      a.put(21)
+      a.resume().put(21)
       assert.deepEqual(results, [21])
 
       a.end()
@@ -248,7 +325,7 @@ describe("sig", function() {
 
       results = capture(b)
       a.targets = [b]
-      a.put(21)
+      a.resume().put(21)
       assert.deepEqual(results, [21])
 
       a.end()

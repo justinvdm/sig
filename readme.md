@@ -139,6 +139,8 @@ Note that `.throw()` and `.catch()` should always be used as a way to propagate 
 
 When a signal is no longer needed, [`end`](#end) should be used. Killing a signal causes the signal to end each of its targets (and in turn, each target will end their own targets), [disconnects](#disconnects) the signal from the signal chain and clears the signal's state.
 
+If the signal still has values buffered that it needs to send, the signal ending is scheduled for after the buffer has cleared. To avoid this causing memory leaks when a signal's buffer never clears, the signal is disconnected from its source signal regardless of whether the buffer is clear or not, allowing the signal to be garbage collected once it goes out of scope.
+
 Note that creating signals without ending them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
 <a name="disconnects"></a>
@@ -190,6 +192,45 @@ b.then(e)
 //             |
 //             v
 // c     d     e
+```
+
+### pausing and resuming
+
+-When a signal is paused using [`pause`](#pause), any values given to it by [`put`](#put) are buffered. When the signal is resumed using [`resume`](#resume), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
+ 
+```javascript
+var s = sig()
+var t = s.each(sig.log)
+
+s.pause()
+ .put(21)
+ .put(23)
+ 
+s.resume()
+// 21
+// 23
+```
+ 
+### eager signals
+ 
+Eager signals are signals that start off paused, but resume after their first target signal is added. Note that signals are eager by default.
+
+ 
+```javascript
+var s = sig()
+  .put(21)
+  .put(23)
+  .each(sig.log)
+
+// 21
+// 23
+```
+
+A signal can be set to non-eager by setting the signal's `eager` property to `false`.
+
+```javascript
+var s = sig()
+s.eager = false
 ```
 
 ### redirection
@@ -250,12 +291,12 @@ v.each(sig.log)  // 23
 ## api
 
 <a name="sig"></a>
-#### `sig()`
+#### `sig([values])`
 
-Creates a new signal.
+Creates a new signal. If a `values` array is given, it is used as the initial values sent from the signal.
 
 ```javascript
-var s = sig()
+var s = sig([1, 2, 3])
 ```
 
 
@@ -263,7 +304,7 @@ var s = sig()
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `next`, `end`, `resolve`, `putEach`, `receive`, `throw`, `catch`, `teardown`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `then`, `next`, `end`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -369,6 +410,37 @@ var t = s.then(sig())
 t.each(sig.log)
 
 s.put(23)  // 23
+```
+
+<a name="pause"></a>
+### `.pause()`
+
+Pauses signal, causing any new values propagating from the signal to get buffered.
+ 
+```javascript
+var s = sig()
+s.each(sig.log)
+ 
+s.put(21)  // 21
+ .pause()
+ .put(23)
+ .resume()  // 23
+```
+ 
+ 
+<a name="resume"></a>
+### `.resume()`
+
+Resumes the signal, causing the buffered values to propagate to the signal's targets and causing any new values to be sent to the signal's targets.
+ 
+```javascript
+var s = sig()
+s.each(sig.log)
+ 
+s.put(21)  // 21
+ .pause()
+ .put(23)
+ .resume()  // 23
 ```
 
 
