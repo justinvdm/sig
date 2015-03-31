@@ -344,6 +344,13 @@ describe("sig", function() {
       assert.strictEqual(b.source, null)
       assert.strictEqual(c.source, null)
     })
+
+    it("should support forced ends", function() {
+      var s = sig([1, 2, 3]).end()
+      assert(!s.ended)
+      s.kill()
+      assert(s.ended)
+    })
   })
 
 

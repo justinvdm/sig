@@ -154,8 +154,15 @@
 
     // if there are messages in the buffer, we need to wait for a flush before
     // we can end the signal
-    if (uncleanBuffer) on(this, 'flush', finishEnd, this)
-    else finishEnd(this)
+    if (uncleanBuffer) on(this, 'flush', forceEnd, this)
+    else forceEnd(this)
+
+    return this
+  }
+
+
+  sig.prototype.kill = function() {
+    forceEnd(this)
     return this
   }
 
@@ -516,7 +523,7 @@
   }
 
 
-  function finishEnd(s) {
+  function forceEnd(s) {
     emit(s, 'end')
     disconnect(s)
     clear(s)
@@ -590,6 +597,7 @@
   sig.put = sig.static(sig.prototype.put)
   sig.next = sig.static(sig.prototype.next)
   sig.end = sig.static(sig.prototype.end)
+  sig.kill = sig.static(sig.prototype.kill)
   sig.resolve = sig.static(sig.prototype.resolve)
   sig.putEach = sig.static(sig.prototype.putEach)
   sig.receive = sig.static(sig.prototype.receive)

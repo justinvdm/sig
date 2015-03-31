@@ -135,13 +135,38 @@ s.throw('o_O')
 
 Note that `.throw()` and `.catch()` should always be used as a way to propagate and handle errors occuring in a chain of signals, as opposed to javascript's native `throw` and `try`-`catch` error handling, since signal processing can occur asynchronously (depending on how sig is being used).
 
+<a name="disposal"></a>
 ### disposal
 
-When a signal is no longer needed, [`end`](#end) should be used. Killing a signal causes the signal to end each of its targets (and in turn, each target will end their own targets), [disconnects](#disconnects) the signal from the signal chain and clears the signal's state.
+When a signal is no longer needed, [`end`](#end) should be used. Ending a signal causes the signal to end each of its targets (and in turn, each target will end their own targets) and [disconnects](#disconnects) the signal from its source. Once the signal no longer has buffered values that it needs to send, its [teardowns](#teardown) are called, its state is cleared and it is marked as ended. Signals marked as ended treat [`.put()`](#put), [`.throw()`](#throw) and [`.then()`](#then-fn) as no-ops. The immediate disconnecting of a signal is necessary to avoid memory leaks caused by signals with buffers that never clear.
 
-If the signal still has values buffered that it needs to send, the signal ending is scheduled for after the buffer has cleared. To avoid this causing memory leaks when a signal's buffer never clears, the signal is disconnected from its source signal regardless of whether the buffer is clear or not, allowing the signal to be garbage collected once it goes out of scope.
+```javascript
+var s = sig()
+s.each(sig.log)
 
-Note that creating signals without ending them when done with them will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
+s.teardown(sig.log, 'ended')
+ .pause()
+ .put(23)
+ .end()
+
+s.resume()
+// 23
+// ended
+```
+
+If the signal needs to be ended immediately, regardless of whether it still has values it needs to send, [`kill`](#kill) should be used.
+
+```javascript
+var s = sig()
+s.each(sig.log)
+
+s.teardown(sig.log, 'ended')
+ .pause()
+ .put(23)
+ .kill()  // ended
+```
+
+Note that creating signals without ending them when their work is done will lead to memory leaks for the same reasons not removing event listeners will when using an event listener pattern.
 
 <a name="disconnects"></a>
 ### disconnects
@@ -304,7 +329,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `then`, `next`, `end`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `then`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -362,7 +387,7 @@ s.throw(new Error('o_O'))  // o_O
 <a name="end"></a>
 ### `.end()`
 
-Kills the given signal.
+Ends the given signal, causing it to end its target signals and disconnect from its source, then clear its state once the signal no longer has values to send. See [disposal](#disposal).
 
 ```javascript
 var s = sig()
@@ -371,6 +396,18 @@ s.each(sig.log)
 s.put(21)  // 21
  .end()
  .put(23)
+```
+
+<a name="kill"></a>
+### `.kill()`
+
+Ends the given signal immediately, regardless of whether the signal still has values it needs to send. See [disposal](#disposal).
+
+```javascript
+sig([1, 2, 3])
+  .teardown(sig.log, 'Ended')
+  .end()
+  .kill()  // Ended
 ```
 
 <a name="then-fn"></a>
@@ -826,7 +863,7 @@ function mul(s, n) {
 <a name="teardown"></a>
 ### `.teardown(fn[, args...])`
 
-Schedules `fn` to be called when the calling signal has ended. `fn` is called with the calling signal as its `this` context. Any state used by the signal should be deconstructed inside a teardown function. If the calling signal has already ended, `fn` is called immediately.
+Schedules `fn` to be called when the calling signal has ended. `fn` is called with the calling signal as its `this` context. Any state used by the signal should be deconstructed inside a teardown function. If the calling signal has already ended, `fn` is called immediately. See [disposal](#disposal).
 
 ```javascript
 function tick() {
