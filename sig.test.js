@@ -23,6 +23,24 @@ function sink(s, fn) {
 }
 
 
+function captureErrors(s) {
+  var results = []
+
+  s.catch(function(v) {
+    results.push(v)
+    this.next()
+  })
+
+  return results
+}
+
+
+function errorMatches(e, message) {
+  return e instanceof Error
+      && e.message === message
+}
+
+
 describe("sig", function() {
   it("should allow values to be sent through signals", function() {
     var src = sig()
@@ -55,16 +73,15 @@ describe("sig", function() {
 
   it("should not allow multiple source signals", function() {
     var t = sig()
+    var errors = captureErrors(t)
 
-    function addSource() {
-      sig().then(t)
-    }
+    sig().then(t)
+    assert(!errors.length)
 
-    addSource()
-
-    assert.throws(
-        addSource,
-        /Cannot set signal's source, signal already has a source/)
+    sig().then(t)
+    assert.equal(errors.length, 1)
+    assert(errorMatches(errors[0],
+      "Cannot set signal's source, signal already has a source"))
   })
 
   it("should allow multiple target signals", function() {
@@ -376,14 +393,6 @@ describe("sig", function() {
       assert.equal(results.length, 2)
       assert.strictEqual(results[0], e1)
       assert.strictEqual(results[1], e2)
-    })
-
-    it("should throw unhandled errors", function() {
-      function thrower() {
-        sig().throw(new Error('o_O'))
-      }
-
-      assert.throws(thrower, /o_O/)
     })
 
     it("should allow errors to propagate", function() {
