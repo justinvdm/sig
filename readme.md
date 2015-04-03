@@ -121,7 +121,7 @@ s.put(21)  // 21
 
 If an error has put the signal into a state it cannot recover from, [`.kill()`](#kill) can be used to end the signal, regardless of whether there are still values to be sent.
 
-``javascript
+```javascript
 var s = sig()
   .catch(function() { this.kill() })
   .done()
@@ -129,14 +129,14 @@ var s = sig()
 
 Note that `.throw()` and `.catch()` should always be used as a way to propagate and handle errors occuring in a chain of signals, as opposed to javascript's native `throw` and `try`-`catch` error handling, since signal processing can occur asynchronously (depending on how sig is being used).
 
-<a name="ending chains"></a>
+<a name="ending-chains"></a>
 ### ending chains
 
 At some point, the last signal in a chain is created, and the values or errors propogated through the chain can't propogate any further. For values, this is fine, any work requiring the values should have been done by now and they can be discarded. The same isn't true for errors -- if an error has propogated through the chain unhandled, it should not be silently ignored and discarded. For this reason, signal chains need to be ended explicitly with [`.done()`](#done).
 
-If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the signal last signal in the chain with [`.kill`](#kill).
+If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the last signal in the chain with [`.kill()`](#kill).
 
-```
+```javascript
 var s = sig()
 
 s.map(function(v) { return v + 1 })
@@ -150,7 +150,7 @@ s.put(1)  // 2
  .throw(':/')  // Error: :/
 ```
 
-`.done()` accepts a node.js-style callback function. If an error reaches the end of the signal chain, the callback function is called with the error as its first argument, then the last signal in the chain is killed using [`.kill`](#kill).
+`.done()` accepts a node.js-style callback function. If an error reaches the end of the signal chain, the callback function is called with the error as its first argument, then the last signal in the chain is killed using [`.kill()`](#kill).
 
 ```javascript
 var s = sig()
@@ -201,7 +201,7 @@ sig([1, 2, 3])
 <a name="disposal"></a>
 ### disposal
 
-When a signal is no longer needed, [`end`](#end) should be used. Ending a signal causes the signal to end each of its targets (and in turn, each target will end their own targets) and [disconnects](#disconnects) the signal from its source. Once the signal no longer has buffered values that it needs to send, its [teardowns](#teardown) are called, its state is cleared and it is marked as ended. Signals marked as ended treat [`.put()`](#put), [`.throw()`](#throw) and [`.then()`](#then-fn) as no-ops. The immediate disconnecting of a signal is necessary to avoid memory leaks caused by signals with buffers that never clear.
+When a signal is no longer needed, [`.end()`](#end) should be used. Ending a signal causes the signal to end each of its targets (and in turn, each target will end their own targets) and [disconnects](#disconnects) the signal from its source. Once the signal no longer has buffered values that it needs to send, its [teardowns](#teardown) are called, its state is cleared and it is marked as ended. Signals marked as ended treat [`.put()`](#put), [`.throw()`](#throw) and [`.then()`](#then-fn) as no-ops. The immediate disconnecting of a signal is necessary to avoid memory leaks caused by signals with buffers that never clear.
 
 ```javascript
 var s = sig()
@@ -510,7 +510,10 @@ Propogates the error instance `e` from the signal.
 
 ```javascript
 var s = sig()
+
 s.catch(sig.log)
+ .done()
+
 s.throw(new Error('o_O'))  // o_O
 ```
 
@@ -590,7 +593,7 @@ s.put(23)  // 23
 <a name="done"></a>
 ### `.done([fn])`
 
-Ends a chain of signals. See [ending chains](#ending chains).
+Ends a chain of signals. See [ending chains](#ending-chains).
 
  
 <a name="resume"></a>
