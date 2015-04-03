@@ -242,6 +242,9 @@
     fn = fn || throwingCallback
 
     return this
+      .then(function() {
+        this.next()
+      })
       .catch(function(e) {
         errored = true
         fn(e)

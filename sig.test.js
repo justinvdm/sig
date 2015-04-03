@@ -604,6 +604,14 @@ describe("sig", function() {
       catch (err) {}
       assert(s.ended)
     })
+
+    it("should discard values", function() {
+      var results = sig([1, 2, 3])
+        .done()
+        .call(capture)
+
+      assert(!results.length)
+    })
   })
 
 
