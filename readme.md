@@ -14,7 +14,7 @@ s.map(function(x) { return x + 1 })
 
 s.put(1)  // 2
  .put(2)
- .put(3)  // 5
+ .put(3)  // 4
 ```
 
 **note** sig is far from stable or usable at the moment, expect drastic changes and don't use it in a production environment.
