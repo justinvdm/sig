@@ -8,8 +8,9 @@ high-level reactive-style programming in javascript
 var s = sig()
 
 s.map(function(x) { return x + 1 })
- .filter(function(x) { return x % 2 })
+ .filter(function(x) { return !(x % 2) })
  .each(sig.log)
+ .done()
 
 s.put(1)  // 2
  .put(2)
@@ -59,9 +60,11 @@ var s = sig()
 
 var t1 = s.then(function(v) { this.put(v + 1).next() })
 var u1 = t1.each(sig.log)
+u1.done()
 
 var t2 = s.then(function(v) { this.put(v * 2).next() })
 var u2 = t2.each(sig.log)
+u2.done()
 
 s.put(3)
 // -- s --       
@@ -86,9 +89,11 @@ var s = sig()
 
 var t1 = s.catch(function(e) { this.throw(e).next() })
 var u1 = t1.catch(sig.log)
+u1.done()
 
 var t2 = s.catch(function(e) { this.throw(e).next() })
 var u2 = t2.catch(sig.log)
+u2.done()
 
 s.throw(new Error('o_O'))
 // ---- s ----       
@@ -107,30 +112,19 @@ var s = sig()
 
 s.catch(function() { this.put(null).next() })
  .each(sig.log)
+ .done()
 
 s.put(21)  // 21
  .throw(new Error('o_O'))  // null
  .put(23)  // 23
 ```
 
-If an error has put the signal into a state it cannot recover from, [`.end()`](#end) can be used to end the signal.
+If an error has put the signal into a state it cannot recover from, [`.kill()`](#kill) can be used to end the signal, regardless of whether there are still values to be sent.
 
-```javascript
+``javascript
 var s = sig()
-  .catch(function() { this.end() })
-```
-
-Errors that reach the end of a chain of signals unhandled get rethrown.
-
-```javascript
-var s = sig()
-
-s.map(function(v) { return v + 1 })
- .map(function(v) { return v * 2 })
- .each(sig.log)
-
-s.throw('o_O')
-// Error: o_O
+  .catch(function() { this.kill() })
+  .done()
 ```
 
 Note that `.throw()` and `.catch()` should always be used as a way to propagate and handle errors occuring in a chain of signals, as opposed to javascript's native `throw` and `try`-`catch` error handling, since signal processing can occur asynchronously (depending on how sig is being used).
@@ -142,7 +136,9 @@ When a signal is no longer needed, [`end`](#end) should be used. Ending a signal
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.teardown(sig.log, 'ended')
  .pause()
@@ -158,7 +154,9 @@ If the signal needs to be ended immediately, regardless of whether it still has 
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.teardown(sig.log, 'ended')
  .pause()
@@ -181,8 +179,8 @@ var d = sig()
 var e = sig()
 
 a.then(b)
-b.then(c)
-b.then(d)
+b.then(c).done()
+b.then(d).done()
 //       a
 //       |
 //       v
@@ -209,7 +207,7 @@ d.end()
 //        
 // c     d     e
 
-b.then(e)
+b.then(e).done()
 //       a
 //       |
 //       v
@@ -221,11 +219,13 @@ b.then(e)
 
 ### pausing and resuming
 
--When a signal is paused using [`pause`](#pause), any values given to it by [`put`](#put) are buffered. When the signal is resumed using [`resume`](#resume), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
+When a signal is paused using [`pause`](#pause), any values given to it by [`put`](#put) are buffered. When the signal is resumed using [`resume`](#resume), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
  
 ```javascript
 var s = sig()
-var t = s.each(sig.log)
+
+s.each(sig.log)
+ .done()
 
 s.pause()
  .put(21)
@@ -242,10 +242,11 @@ Eager signals are signals that start off paused, but resume after their first ta
 
  
 ```javascript
-var s = sig()
+sig()
   .put(21)
   .put(23)
   .each(sig.log)
+  .done()
 
 // 21
 // 23
@@ -260,7 +261,60 @@ s.eager = false
 
 ### redirection
 
-Sometimes, a function will return a single signal, though it has created one or more signal chains to send values to the returned signal. For these cases, `redir` should be used to allow values and errors to be redirected to the returned signal, and to set these chains to disconnect when the returned signal is disconnected. If a function creates a signal chain, but the chain isn't returned or redirected, this will lead to memory leaks. Rule of thumb: either return a signal chain or redirect it to another returned signal.
+Sometimes, a function will return a single signal, though it has created one or more signal chains to send values to the returned signal.
+
+Redirecting using [`.put()`](#put) from a different signal's value handling function will cause the signal to continue running indefinitely instead of disconnecting with its targets:
+
+```javascript
+function join(a, b) {
+  var out = sig()
+  var badRedirA = a.each(badRedir)
+  var badRedirB = b.each(badRedir)
+
+  function badRedir(v) {
+    out.put(v)
+    this.next()
+  }
+
+  return out
+}
+
+
+var a = sig()
+var b = sig()
+var out = join(a, b)
+var logOut = out.each(sig.log)
+logOut.done()
+
+// single line for targets, double line for redirections
+//
+//   a                      b
+//   |                      |
+//   v                      v
+// badRedirA ==> out <== badRedirB
+//                |
+//                v
+//             logOut
+
+a.put(21)  // 21
+b.put(23)  // 23
+
+out.end()
+
+// redirA and redirB are still connected :/
+//
+//   a                  b
+//   |                  |
+//   v                  v
+// redirA ==> out <== redirB
+//
+//
+//          logOut
+```
+
+To redirect without this unwanted behaviour, [`.redir()`](#redir) should be used to redir values and errors to the returned signal, and to set these chains to disconnect when the returned signal is disconnected.
+
+If a function creates a signal chain, but the chain isn't returned, redirected or ended, this will lead to memory leaks. Rule of thumb: If you have a signal that outputs values, either return the signal, or redirect it to another returned signal.
 
 ```javascript
 function join(a, b) {
@@ -275,6 +329,7 @@ var a = sig()
 var b = sig()
 var out = join(a, b)
 var logOut = out.each(sig.log)
+logOut.done()
 
 // single line for targets, double line for redirections
 //
@@ -291,6 +346,8 @@ b.put(23)  // 23
 
 out.end()
 
+// redirA and redirB are disconnected!
+//
 //   a                  b
 //                      
 //                      
@@ -299,6 +356,66 @@ out.end()
 //              
 //          logOut
 ```
+
+<a name="ending chains"></a>
+### ending chains
+
+At some point, the last signal in a chain is created, and the values or errors propogated through the chain can't propogate any further. For values, this is fine, any work requiring the values should have been done by now and they can be discarded. The same isn't true for errors -- if an error has propogated through the chain unhandled, it should not be silently ignored and discarded. For this reason, signal chains need to be ended explicitly with [`.done()`](#done).
+
+If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the signal last signal in the chain with [`.kill`](#kill).
+
+```
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done()
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .throw(':/')  // Error: :/
+```
+
+`.done()` accepts a node.js-style callback function. If an error reaches the end of the signal chain, the callback function is called with the error as its first argument, then the last signal in the chain is killed using [`.kill`](#kill).
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done(function(e) {
+   sig.log(e || 'done!')
+ })
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .throw(':/')  // :/
+ .put(4)
+ .put(5)
+```
+
+If a signal in the chain has ended, the callback function is invoked without any arguments.
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done(function(e) {
+   sig.log(e || 'done!')
+ })
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .end()  // done!
+```
+
 
 <a name="sticky"></a>
 ### sticky signals
@@ -335,7 +452,9 @@ For example, using the static counterpart of [`.put`](#put) would look something
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 sig.put(s, 21)  // 21
 sig.put(s, 23)  // 23
@@ -349,7 +468,9 @@ Puts the value `v` through the signal, where `v` can be a value of any type.
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.put(21)  // 21
  .put(21)  // 23
@@ -364,6 +485,7 @@ Tells the calling signal that it is done processing its most recent value or err
 ```javascript
 var s = sig()
 var t = s.then(sig.log)
+t.done()
 
 s.put(1)  // 1
  .put(2)
@@ -391,7 +513,9 @@ Ends the given signal, causing it to end its target signals and disconnect from 
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.put(21)  // 21
  .end()
@@ -420,6 +544,7 @@ var s = sig()
 
 s.then(function(v) { this.put(v + 2).next() })
  .each(sig.log)
+ .done()
 
 s.put(21)  // 23
 ```
@@ -431,6 +556,7 @@ var s = sig()
 
 s.then(function(a, b, c) { this.put(a + b + c).next() }, 1, 2)
  .each(sig.log)
+ .done()
 
 s.put(20)  // 23
 ```
@@ -444,26 +570,19 @@ Sets the calling signal as the source of the signal `t` and returns `t`.
 ```javascript
 var s = sig()
 var t = s.then(sig())
+
 t.each(sig.log)
+ .done()
 
 s.put(23)  // 23
 ```
 
-<a name="pause"></a>
-### `.pause()`
 
-Pauses signal, causing any new values propagating from the signal to get buffered.
- 
-```javascript
-var s = sig()
-s.each(sig.log)
- 
-s.put(21)  // 21
- .pause()
- .put(23)
- .resume()  // 23
-```
- 
+<a name="done"></a>
+### `.done([fn])`
+
+Ends a chain of signals. See [ending chains](#ending chains).
+
  
 <a name="resume"></a>
 ### `.resume()`
@@ -472,7 +591,9 @@ Resumes the signal, causing the buffered values to propagate to the signal's tar
  
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
  
 s.put(21)  // 21
  .pause()
@@ -490,9 +611,10 @@ Creates and returns a new target signal with `fn` set as its error handler. `fn`
 var s = sig()
 
 s.catch(function(e) {
-  sig.log(e)
-  this.next()
-})
+   sig.log(e)
+   this.next()
+ })
+ .done()
 
 s.throw(new Error('o_O'))  // o_O
 ```
@@ -503,9 +625,10 @@ If extra arguments are provided, they are used as extra arguments to each call t
 var s = sig()
 
 s.catch(function(a, b, c) {
-  sig.log(a, b, c)
-  this.next()
-})
+   sig.log(a, b, c)
+   this.next()
+ })
+ .done()
 
 s.throw(new Error('o_O'), '-_-', ':/')  // o_O -_- :/
 ```
@@ -521,6 +644,7 @@ var s = sig()
 
 s.each(function(v) { this.put(v + 2) })
  .each(sig.log)
+ .done()
 
 s.put(21)  // 23
 ```
@@ -534,6 +658,7 @@ var s = sig()
 
 s.each(function(a, b, c) { this.put(a + b + c) }, 1, 2)
  .each(sig.log)
+ .done()
 
 s.put(20)  // 23
 ```
@@ -549,6 +674,7 @@ var s = sig()
 
 s.map(function(v) { return v + 2 })
  .each(sig.log)
+ .done()
 
 s.put(21)  // 23
 ```
@@ -560,6 +686,7 @@ var s = sig()
 
 s.map(function(a, b, c) { this.put(a + b + c) }, 1, 2)
  .each(sig.log)
+ .done()
 
 s.put(20)  // 23
 ```
@@ -575,6 +702,7 @@ var s = sig()
 
 s.map(function(v) { return v + 2 })
  .each(sig.log)
+ .done()
 
 s.put(21)  // 23
 ```
@@ -586,6 +714,7 @@ var s = sig()
 
 s.map(function(a, b, c) { this.put(a + b + c) }, 1, 2)
  .each(sig.log)
+ .done()
 
 s.put(20)  // 23
 ```
@@ -601,6 +730,7 @@ var s = sig()
 
 s.filter(function(v) { return v % 2 })
  .each(sig.log)
+ .done()
 
 s.put(22)
  .put(23)  // 23
@@ -613,6 +743,7 @@ var s = sig()
 
 s.filter(function(a, b, c) { return (a + b + c) % 2 }, 1, 2)
  .each(sig.log)
+ .done()
 
 s.put(22)  // 22
  .put(23)
@@ -625,6 +756,7 @@ var s = sig()
 
 s.filter()
  .each(sig.log)
+ .done()
 
 s.put(0)
  .put(1)  // 1
@@ -647,7 +779,10 @@ function join(a, b) {
 
 var a = sig()
 var b = sig()
-join(a, b).each(sig.log)
+
+join(a, b)
+  .each(sig.log)
+  .done()
 
 a.put(21)  // 21
 b.put(23)  // 23
@@ -664,6 +799,7 @@ var s = sig()
 
 s.flatten()
  .each(sig.log)
+ .done()
 
 s.putEach([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
 // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -680,6 +816,7 @@ var s = sig()
 
 s.limit(3)
  .each(sig.log)
+ .done()
 
 s.put(21)  // 21
  .put(22)  // 22
@@ -699,6 +836,7 @@ var s = sig()
 
 s.once()
  .each(sig.log)
+ .done()
 
 s.put(21)  // 21
  .put(22)
@@ -721,6 +859,7 @@ var lookup = {
 
 s.update(function(k) { return lookup[k] })
  .each(sig.log)
+ .done()
 
 s.put('t')
 
@@ -753,6 +892,7 @@ var u = sig()
 
 s.update()
  .each(sig.log)
+ .done()
 
 s.put(t)
 
@@ -787,6 +927,7 @@ var lookup = {
 
 s.append(function(k) { return lookup[k] })
  .each(sig.log)
+ .done()
 
 s.put('t')
 
@@ -819,6 +960,7 @@ var u = sig()
 
 s.append()
  .each(sig.log)
+ .done()
 
 s.put(t)
 
@@ -848,7 +990,7 @@ var s = sig()
 
 s.call(mul, 2)
  .each(sig.log)
-
+ .done()
 
 s.putEach([1, 2, 3])
 // [2, 4, 6]
@@ -878,10 +1020,12 @@ function tick() {
 }
 
 var s = tick()
-var t = s.each(sig.log)
+
+s.each(sig.log)
+ .done()
 
 // this will cause the teardown function to get called
-t.end()
+s.end()
 ```
 
 <a name="resolve"></a>
@@ -891,7 +1035,9 @@ Sends the value `v` (or `undefined` if no value is given) from the calling signa
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.resolve(21)  // 21
  .put(23)
@@ -905,7 +1051,9 @@ Sends each value in a `values` array from the calling signal.
 
 ```javascript
 var s = sig()
+
 s.each(sig.log)
+ .done()
 
 s.putEach([1, 2, 3])
 // 1
@@ -921,8 +1069,10 @@ Sends the signal as a value to signal `t`.
 
 ```javascript
 var s = sig()
-  .update()
-  .each(sig.log)
+
+s.update()
+ .each(sig.log)
+ .done()
 
 var t = sig()
 t.to(s)
@@ -938,8 +1088,8 @@ Creates and returns a new [sticky](#sticky) signal. If `v` is given, it is used 
 
 ```javascript
 var v = sig.val(23)
-v.each(sig.log)  // 23
-v.each(sig.log)  // 23
+v.each(sig.log).done()  // 23
+v.each(sig.log).done()  // 23
 ```
 
 
@@ -950,14 +1100,14 @@ If a `v` is given, a sticky signal is returned with `v` as its initial value. If
 
 ```javascript
 var v = sig.ensureVal(23)
-v.each(sig.log)  // 23
+v.each(sig.log).done()  // 23
 
 var s = sig()
 var t = sig.ensureVal(s)
 
 s.put(23)
-t.each(sig.log)  // 23
-t.each(sig.log)  // 23
+t.each(sig.log).done()  // 23
+t.each(sig.log).done()  // 23
 ```
 
 
@@ -972,6 +1122,7 @@ var t = sig()
 
 sig.any([s, 23, t])
   .each(sig.spread, sig.log)
+  .done()
 
 s.put(1)  // 1 0
 t.put(3)  // 3 2
@@ -996,6 +1147,7 @@ sig.any({
     c: t
   })
   .each(sig.spread, sig.log)
+  .done()
 
 s.put(1)  // 1 a
 t.put(3)  // 3 c
@@ -1017,6 +1169,7 @@ var t = sig()
 
 sig.all([s, 23, t])
   .each(sig.log)
+  .done()
 
 s.put(1)
 t.put(3)  // [1, 23, 3]
@@ -1041,6 +1194,7 @@ sig.all({
     c: t
   })
   .each(sig.log)
+  .done()
 
 s.put(1)
 
@@ -1085,6 +1239,7 @@ var t = sig()
 
 sig.merge([s, 23, t])
   .each(sig.log)
+  .done()
 
 s.put(1)  // 1
 t.put(3)  // 3
@@ -1109,6 +1264,7 @@ sig.merge({
     c: t
   })
   .each(sig.log)
+  .done()
 
 s.put(1)  // 1
 t.put(3)  // 3
@@ -1141,6 +1297,7 @@ s.filter()
  .map(sig.log)
  .map(function(v) { return v * 2 })
  .each(sig.log)
+ .done()
 
 s.putEach([0, 1, 1, 0])
 // 1
