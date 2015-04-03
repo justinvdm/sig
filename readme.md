@@ -129,6 +129,75 @@ var s = sig()
 
 Note that `.throw()` and `.catch()` should always be used as a way to propagate and handle errors occuring in a chain of signals, as opposed to javascript's native `throw` and `try`-`catch` error handling, since signal processing can occur asynchronously (depending on how sig is being used).
 
+<a name="ending chains"></a>
+### ending chains
+
+At some point, the last signal in a chain is created, and the values or errors propogated through the chain can't propogate any further. For values, this is fine, any work requiring the values should have been done by now and they can be discarded. The same isn't true for errors -- if an error has propogated through the chain unhandled, it should not be silently ignored and discarded. For this reason, signal chains need to be ended explicitly with [`.done()`](#done).
+
+If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the signal last signal in the chain with [`.kill`](#kill).
+
+```
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done()
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .throw(':/')  // Error: :/
+```
+
+`.done()` accepts a node.js-style callback function. If an error reaches the end of the signal chain, the callback function is called with the error as its first argument, then the last signal in the chain is killed using [`.kill`](#kill).
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done(function(e) {
+   sig.log(e || 'done!')
+ })
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .throw(':/')  // :/
+ .put(4)
+ .put(5)
+```
+
+If a signal in the chain has ended, the callback function is invoked without any arguments.
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done(function(e) {
+   sig.log(e || 'done!')
+ })
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .end()  // done!
+```
+
+If any values propogate to the end of the signal chain, [`.done()`](#done) will discard them.
+
+```javascript
+// nothing will get logged, `.done()` has discarded the values
+sig([1, 2, 3])
+  .done()
+  .each(sig.log)
+```
+
+
 <a name="disposal"></a>
 ### disposal
 
@@ -356,66 +425,6 @@ out.end()
 //              
 //          logOut
 ```
-
-<a name="ending chains"></a>
-### ending chains
-
-At some point, the last signal in a chain is created, and the values or errors propogated through the chain can't propogate any further. For values, this is fine, any work requiring the values should have been done by now and they can be discarded. The same isn't true for errors -- if an error has propogated through the chain unhandled, it should not be silently ignored and discarded. For this reason, signal chains need to be ended explicitly with [`.done()`](#done).
-
-If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the signal last signal in the chain with [`.kill`](#kill).
-
-```
-var s = sig()
-
-s.map(function(v) { return v + 1 })
- .filter(function(x) { return !(x % 2) })
- .each(sig.log)
- .done()
-
-s.put(1)  // 2
- .put(2)
- .put(3)  // 4
- .throw(':/')  // Error: :/
-```
-
-`.done()` accepts a node.js-style callback function. If an error reaches the end of the signal chain, the callback function is called with the error as its first argument, then the last signal in the chain is killed using [`.kill`](#kill).
-
-```javascript
-var s = sig()
-
-s.map(function(v) { return v + 1 })
- .filter(function(x) { return !(x % 2) })
- .each(sig.log)
- .done(function(e) {
-   sig.log(e || 'done!')
- })
-
-s.put(1)  // 2
- .put(2)
- .put(3)  // 4
- .throw(':/')  // :/
- .put(4)
- .put(5)
-```
-
-If a signal in the chain has ended, the callback function is invoked without any arguments.
-
-```javascript
-var s = sig()
-
-s.map(function(v) { return v + 1 })
- .filter(function(x) { return !(x % 2) })
- .each(sig.log)
- .done(function(e) {
-   sig.log(e || 'done!')
- })
-
-s.put(1)  // 2
- .put(2)
- .put(3)  // 4
- .end()  // done!
-```
-
 
 <a name="sticky"></a>
 ### sticky signals
