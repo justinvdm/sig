@@ -20,7 +20,7 @@
     s.paused = true
     s.started = false
     s.eager = true
-    s.sticky = true
+    s.sticky = false
     s.waiting = true
     s.ended = false
     s.disconnected = false
@@ -236,6 +236,23 @@
   }
 
 
+  sig.prototype.done = function(fn) {
+    var s = this
+    var errored = false
+    fn = fn || throwingCallback
+
+    return this
+      .catch(function(e) {
+        errored = true
+        fn(e)
+        s.kill()
+      })
+      .teardown(function() {
+        if (!errored) fn()
+      })
+  }
+
+
   sig.prototype.each = function(fn) {
     fn = sig.prime(sig.slice(arguments, 1), fn)
 
@@ -336,9 +353,7 @@
     return this
       .map(fn)
       .filter(sig.isSig)
-      .each(function(s) {
-        s.redir(this)
-      })
+      .each(function(s) { s.redir(this) })
   }
 
 
@@ -423,7 +438,7 @@
     var buffer = s.outBuffer
     var i = -1
     var n = buffer.length
-    while (++i < n) forceSend(s, buffer[i])
+    while (++i < n) forceSend(s, buffer.shift())
     s.outBuffer = []
     emit(s, 'flush')
   }
@@ -519,6 +534,7 @@
     s.targets = []
     s.inBuffer = []
     s.outBuffer = []
+    s.current = _nil_
   }
 
 
@@ -527,6 +543,11 @@
     disconnect(s)
     clear(s)
     s.ended = true
+  }
+
+
+  function throwingCallback(err) {
+    if (err) throw err
   }
 
 
@@ -594,14 +615,17 @@
 
 
   sig.put = sig.static(sig.prototype.put)
+  sig.throw = sig.static(sig.prototype.throw)
   sig.next = sig.static(sig.prototype.next)
   sig.end = sig.static(sig.prototype.end)
   sig.kill = sig.static(sig.prototype.kill)
+  sig.then = sig.static(sig.prototype.then)
+  sig.then = sig.static(sig.prototype.then)
+  sig.catch = sig.static(sig.prototype.catch)
+  sig.done = sig.static(sig.prototype.done)
   sig.resolve = sig.static(sig.prototype.resolve)
   sig.putEach = sig.static(sig.prototype.putEach)
   sig.receive = sig.static(sig.prototype.receive)
-  sig.throw = sig.static(sig.prototype.throw)
-  sig.catch = sig.static(sig.prototype.catch)
   sig.teardown = sig.static(sig.prototype.teardown)
   sig.each = sig.static(sig.prototype.each)
   sig.map = sig.static(sig.prototype.map)
@@ -609,7 +633,6 @@
   sig.flatten = sig.static(sig.prototype.flatten)
   sig.limit = sig.static(sig.prototype.limit)
   sig.once = sig.static(sig.prototype.once)
-  sig.then = sig.static(sig.prototype.then)
   sig.redir = sig.static(sig.prototype.redir)
   sig.update = sig.static(sig.prototype.update)
   sig.append = sig.static(sig.prototype.append)

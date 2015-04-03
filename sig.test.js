@@ -4,7 +4,10 @@ var sig = require('./sig'),
 
 function capture(s) {
   var results = []
+
   s.each(function(v) { results.push(v) })
+   .done()
+
   return results
 }
 
@@ -24,20 +27,9 @@ function sink(s, fn) {
 
 
 function captureErrors(s) {
-  var results = []
-
-  s.catch(function(v) {
-    results.push(v)
-    this.next()
-  })
-
-  return results
-}
-
-
-function errorMatches(e, message) {
-  return e instanceof Error
-      && e.message === message
+  return s
+    .catch(function(e) { this.put(e.message).next() })
+    .call(capture)
 }
 
 
@@ -58,6 +50,7 @@ describe("sig", function() {
         results.push(x)
         this.next()
       })
+      .done()
 
     assert(!results.length)
 
@@ -73,15 +66,16 @@ describe("sig", function() {
 
   it("should not allow multiple source signals", function() {
     var t = sig()
-    var errors = captureErrors(t)
+ 
+    function addSource() {
+      sig().then(t).done()
+    }
 
-    sig().then(t)
-    assert(!errors.length)
-
-    sig().then(t)
-    assert.equal(errors.length, 1)
-    assert(errorMatches(errors[0],
-      "Cannot set signal's source, signal already has a source"))
+    addSource()
+ 
+    assert.throws(
+      addSource,
+      /Cannot set signal's source, signal already has a source/)
   })
 
   it("should allow multiple target signals", function() {
@@ -101,8 +95,8 @@ describe("sig", function() {
       this.next()
     }
 
-    s.then(t1)
-    s.then(t2)
+    s.then(t1).done()
+    s.then(t2).done()
 
     s.putEach([1, 2, 3, 4])
     assert.deepEqual(results1, [1, 2, 3, 4])
@@ -127,6 +121,7 @@ describe("sig", function() {
     
       s.then(t)
        .then(u)
+       .done()
     
       s.pause()
       t.pause()
@@ -166,11 +161,11 @@ describe("sig", function() {
       assert(!s.paused)
     
       s.pause()
-      s.then(sig())
+      s.then(sig()).done()
       assert(s.paused)
     
       t.end()
-      s.then(sig())
+      s.then(sig()).done()
       assert(s.paused)
     })
   })
@@ -187,6 +182,7 @@ describe("sig", function() {
       var a = sig()
       var b = a.then(function(v){ this.put(v) })
       var c = b.then(sig())
+      c.done()
 
       b.pause()
 
@@ -207,9 +203,9 @@ describe("sig", function() {
 
     it("should end its targets", function() {
       var a = sig()
-      var b = a.then(sig())
-      var c = b.then(sig())
-      var d = b.then(sig())
+      var b = a.then(sig()).done()
+      var c = b.then(sig()).done()
+      var d = b.then(sig()).done()
 
       assert(!a.ended)
       assert(!b.ended)
@@ -231,8 +227,8 @@ describe("sig", function() {
       var e = sig()
 
       a.then(b)
-      b.then(c)
-      b.then(d)
+      b.then(c).done()
+      b.then(d).done()
       //       a
       //       |
       //       v
@@ -286,7 +282,7 @@ describe("sig", function() {
       assert.strictEqual(c.source, null)
       assert.strictEqual(d.source, null)
 
-      b.then(e)
+      b.then(e).done()
       //       a
       //       |
       //       v
@@ -309,7 +305,7 @@ describe("sig", function() {
     it("should delay signal ending until the buffer is clear", function() {
       var s = sig([1, 2, 3]).end()
       assert(!s.ended)
-      s.each(function(){})
+      s.each(function(){}).done()
       assert(s.ended)
     })
 
@@ -357,6 +353,8 @@ describe("sig", function() {
       var a = sig().end()
       var b = a.then(sig())
       var c = a.then(function(){})
+      b.done()
+      c.done()
       assert(!a.targets.length)
       assert.strictEqual(b.source, null)
       assert.strictEqual(c.source, null)
@@ -406,8 +404,8 @@ describe("sig", function() {
       var e2 = new Error(':|')
 
       s1.then(s2)
-      s2.then(s3)
-      s2.then(s4)
+      s2.then(s3).done()
+      s2.then(s4).done()
 
       s2.handlers.error = function(caughtErr) {
         if (caughtErr.message != ':|') this.throw(caughtErr)
@@ -431,7 +429,7 @@ describe("sig", function() {
     it("should handle errors thrown in value handlers", function(done) {
       var s = sig()
       var t = s.then(sig())
-      var u = t.then(sig())
+      var u = t.then(sig()).done()
       var e = new Error('o_O')
 
       t.handlers.value = function() {
@@ -449,7 +447,7 @@ describe("sig", function() {
     it("should handle errors thrown in error handlers", function(done) {
       var s = sig()
       var t = s.then(sig())
-      var u = t.then(sig())
+      var u = t.then(sig()).done()
       var e = new Error('o_O')
 
       t.handlers.error = function() {
@@ -487,14 +485,18 @@ describe("sig", function() {
     it("should allow extra arguments to be given", function(done) {
       var s = sig()
 
-      s.then(function(a, b, c) {
+      s.then(fn, 2, 3)
+       .done(done)
+
+      s.put(1)
+       .end()
+
+      function fn(a, b, c) {
         assert.equal(a, 1)
         assert.equal(b, 2)
         assert.equal(c, 3)
-        done()
-      }, 2, 3)
-
-      s.put(1)
+        this.next()
+      }
     })
   })
 
@@ -504,25 +506,103 @@ describe("sig", function() {
       var s = sig()
       var e = new Error(':/')
 
-      var t = s.catch(function(caughtErr) {
-        assert.strictEqual(caughtErr, e)
-        done()
-      })
+      var t = s
+        .catch(fn)
+        .done(done)
 
       assert.notStrictEqual(t, s)
+
       s.throw(e)
+       .end()
+
+       function fn(caughtErr) {
+         assert.strictEqual(caughtErr, e)
+         this.next()
+       }
     })
 
     it("should support extra arguments", function(done) {
       var s = sig()
 
-      s.catch(function(caughtErr, a, b) {
-        assert.strictEqual(a, 1)
-        assert.strictEqual(b, 2)
-        done()
-      }, 1, 2)
+      s.catch(fn, 1, 2)
+       .done(done)
 
       s.throw(new Error(':/'))
+       .end()
+
+      function fn(caughtErr, a, b) {
+        assert.strictEqual(a, 1)
+        assert.strictEqual(b, 2)
+        this.next()
+      }
+    })
+  })
+
+
+  describe(".done", function() {
+    it("should callback when the signal ends", function() {
+      var s = sig()
+      var calls = 0
+      s.done(function() { calls++ })
+
+      assert.strictEqual(calls, 0)
+      s.end()
+      assert.strictEqual(calls, 1)
+    })
+
+    it("should errback when the signal encounters an error", function() {
+      var s = sig()
+      var calls = 0
+      var err1 = new Error(':/')
+      var err2
+
+      s.done(function(err) {
+        calls++
+        err2 = err
+      })
+
+      assert.strictEqual(calls, 0)
+      s.throw(err1)
+      assert.strictEqual(calls, 1)
+      assert.strictEqual(err1, err2)
+    })
+
+    it("should allow no callback to be given", function(done) {
+      var s = sig()
+
+      s.done()
+       .teardown(done)
+
+      s.end()
+    })
+
+    it("should rethrow errors if no callback is given", function() {
+      var s = sig()
+      s.done()
+      assert.throws(thrower, /o_O/)
+
+      function thrower() {
+        s.throw(new Error('o_O'))
+      }
+    })
+
+    it("should kill on an error if a callback is given", function() {
+      var s = sig([1,2,3])
+      s.done(function(){})
+
+      assert(!s.ended)
+      s.throw(':/')
+      assert(s.ended)
+    })
+
+    it("should kill on an error if no callback is given", function() {
+      var s = sig([1,2,3])
+      s.done(function(){})
+
+      assert(!s.ended)
+      try { s.throw(':/') }
+      catch (err) {}
+      assert(s.ended)
     })
   })
 
@@ -563,7 +643,7 @@ describe("sig", function() {
       s.each(function(x) { this.put(x * 2) })
        .each(function(x) { this.put(x + 1) })
        .call(sink, assert.deepEqual, [3, 5, 7, 9])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -583,7 +663,7 @@ describe("sig", function() {
           [3, 23, 32],
           [4, 23, 32]
         ])
-        .teardown(done)
+        .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -598,7 +678,7 @@ describe("sig", function() {
       s.map(function(x) { return x * 2 })
        .map(function(x) { return x + 1 })
        .call(sink, assert.deepEqual, [3, 5, 7, 9])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -609,7 +689,7 @@ describe("sig", function() {
 
       s.map(23)
        .call(sink, assert.deepEqual, [23, 23, 23, 23])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -629,7 +709,7 @@ describe("sig", function() {
          [3, 23, 32],
          [4, 23, 32]
        ])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -644,7 +724,7 @@ describe("sig", function() {
       s.filter(function(x) { return x % 2 })
        .filter(function(x) { return x < 10 })
        .call(sink, assert.deepEqual, [3, 5])
-       .teardown(done)
+       .done(done)
 
       s.putEach([2, 3, 4, 5, 6, 11, 12, 15, 16])
        .end()
@@ -655,7 +735,7 @@ describe("sig", function() {
 
       s.filter(fn, 3, 2)
        .call(sink, assert.deepEqual, [1, 3])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4])
        .end()
@@ -670,7 +750,7 @@ describe("sig", function() {
 
       s.filter()
        .call(sink, assert.deepEqual, [1, 3])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 0, 3, null])
        .end()
@@ -685,7 +765,7 @@ describe("sig", function() {
       s.flatten()
        .limit(10)
        .call(sink, assert.deepEqual, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, [2, [3, [4, 5, [6, 7, 8, [9, [10]]]]]]])
        .end()
@@ -699,7 +779,7 @@ describe("sig", function() {
 
       s.limit(3)
        .call(sink, assert.deepEqual, [1, 2, 3])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4, 5, 6])
        .end()
@@ -707,7 +787,7 @@ describe("sig", function() {
 
     it("should end the signal chain once the limit is reached", function() {
       var s = sig()
-      s.limit(3).then(sig())
+      s.limit(3).then(sig()).done()
 
       assert(!s.disconnected)
 
@@ -726,7 +806,7 @@ describe("sig", function() {
 
       s.limit(0)
        .call(sink, assert.deepEqual, [])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4, 5, 6])
        .end()
@@ -740,7 +820,7 @@ describe("sig", function() {
 
       s.once()
        .call(sink, assert.deepEqual, [1])
-       .teardown(done)
+       .done(done)
 
       s.putEach([1, 2, 3, 4, 5, 6])
        .end()
@@ -748,7 +828,7 @@ describe("sig", function() {
 
     it("should end the signal chain after outputting a value", function() {
       var s = sig()
-      s.once().then(sig())
+      s.once().then(sig()).done()
 
       assert(!s.disconnected)
       s.put(23)
@@ -824,15 +904,9 @@ describe("sig", function() {
     })
 
     it("should handle errors from its source signals", function() {
-      var results = []
       var a = sig()
       var b = sig()
-
-      sig.any([a, b])
-        .catch(function(e) {
-          results.push(e.message)
-          this.next()
-        })
+      var results = captureErrors(sig.any([a, b]))
 
       a.throw(new Error(':/'))
       b.throw(new Error(':|'))
@@ -979,15 +1053,9 @@ describe("sig", function() {
     })
 
     it("should handle errors from its source signals", function() {
-      var results = []
       var a = sig()
       var b = sig()
-
-      sig.all([a, b])
-        .catch(function(e) {
-          results.push(e.message)
-          this.next()
-        })
+      var results = captureErrors(sig.all([a, b]))
 
       a.throw(new Error(':/'))
       b.throw(new Error(':|'))
@@ -1046,15 +1114,9 @@ describe("sig", function() {
     })
 
     it("should handle errors from its source signals", function() {
-      var results = []
       var a = sig()
       var b = sig()
-
-      sig.merge([a, b])
-        .catch(function(e) {
-          results.push(e.message)
-          this.next()
-        })
+      var results = captureErrors(sig.merge([a, b]))
 
       a.throw(new Error(':/'))
       b.throw(new Error(':|'))
