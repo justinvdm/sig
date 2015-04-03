@@ -158,9 +158,7 @@ var s = sig()
 s.map(function(v) { return v + 1 })
  .filter(function(x) { return !(x % 2) })
  .each(sig.log)
- .done(function(e) {
-   sig.log(e || 'done!')
- })
+ .done(function(e) { sig.log(e || 'done!') })
 
 s.put(1)  // 2
  .put(2)
@@ -178,9 +176,7 @@ var s = sig()
 s.map(function(v) { return v + 1 })
  .filter(function(x) { return !(x % 2) })
  .each(sig.log)
- .done(function(e) {
-   sig.log(e || 'done!')
- })
+ .done(function(e) { sig.log(e || 'done!') })
 
 s.put(1)  // 2
  .put(2)
@@ -455,7 +451,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `then`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -593,7 +589,23 @@ s.put(23)  // 23
 <a name="done"></a>
 ### `.done([fn])`
 
-Ends a chain of signals. See [ending chains](#ending-chains).
+Ends a chain of signals (see [ending chains](#ending-chains)). If an unhandled error reaches the end of the signal chain `fn` will be called with the error as its first argument and the last signal in the chain will be [killed](#kill). If the signal ends without any errors `fn` will be called with no arguments. If `fn` isn't given, the first unhandled error will be rethrown using javascript's native `throw`.
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .filter(function(x) { return !(x % 2) })
+ .each(sig.log)
+ .done(function(e) { sig.log(e || 'done!') })
+
+s.put(1)  // 2
+ .put(2)
+ .put(3)  // 4
+ .throw(':/')  // :/
+ .put(4)
+ .put(5)
+```
 
  
 <a name="resume"></a>
