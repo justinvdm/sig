@@ -8,25 +8,29 @@
 
   function sig(obj) {
     var s = new Sig()
-    s.targets = []
-    s.source = null
-    s.handlers = {}
-    s.handlers.value = putNextHandler
-    s.handlers.error = throwNextHandler
-    s.current = _nil_
-    s.inBuffer = []
-    s.outBuffer = []
-    s.eventListeners = {}
-    s.paused = true
-    s.started = false
-    s.eager = true
-    s.sticky = false
-    s.waiting = true
-    s.ended = false
-    s.disconnected = false
-    s.isDependant = false
     if (obj) s.putEach(obj)
     return s
+  }
+
+
+  function Sig() {
+    this.targets = []
+    this.source = null
+    this.handlers = {}
+    this.handlers.value = putNextHandler
+    this.handlers.error = throwNextHandler
+    this.current = _nil_
+    this.inBuffer = []
+    this.outBuffer = []
+    this.eventListeners = {}
+    this.paused = true
+    this.started = false
+    this.eager = true
+    this.sticky = false
+    this.waiting = true
+    this.ended = false
+    this.disconnected = false
+    this.isDependant = false
   }
 
 
@@ -669,8 +673,6 @@
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
 
-
-  function Sig() {}
   Sig.prototype = sig.prototype
 
 
