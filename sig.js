@@ -673,6 +673,7 @@
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
 
+  sig.Sig = Sig
   Sig.prototype = sig.prototype
 
 
