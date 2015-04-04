@@ -1369,12 +1369,139 @@ describe("sig", function() {
       s.throw(e)
     })
 
-    it("should not redirect after the target has ended", function() {
+    it("should disconnect when the target has ended", function() {
+      var s = sig()
+      var t = sig()
+      var u = s.redir(t)
+
+      assert(!u.disconnected)
+      t.end()
+      assert(u.disconnected)
+    })
+  })
+
+
+  describe(".tap(fn)", function() {
+    it("should call the given function", function() {
+      var s = sig()
+      var results = []
+
+      s.tap(function(v) { results.push(v) })
+       .done()
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should propagate the source signal's values", function() {
+      var s = sig()
+
+      var results = s
+        .tap(function() {})
+        .call(capture)
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should support extra arguments", function() {
+      var s = sig()
+      var results = []
+
+      s.tap(function(a, b, c) { results.push([a, b, c]) }, 32, 23)
+       .done()
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [
+        [1, 32, 23],
+        [2, 32, 23],
+        [3, 32, 23]])
+    })
+  })
+
+
+  describe(".tap(t)", function() {
+    it("should redirect to the target signal", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
 
-      s.redir(t)
+      s.tap(t)
+       .done()
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should propagate the source signal's values", function() {
+      var s = sig()
+
+      var results = s
+        .tap(sig())
+        .call(capture)
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should stop redirecting when the returned signal ends", function() {
+      var s = sig()
+      var t = sig()
+      var u = s.tap(t)
+      var results = capture(t)
+      u.done()
+
+      assert(!results.length)
+
+      s.put(1)
+       .put(2)
+       .put(3)
+
+      assert.deepEqual(results, [1, 2, 3])
+
+      u.end()
+
+      s.put(4)
+       .put(5)
+       .put(6)
+
+      assert.deepEqual(results, [1, 2, 3])
+    })
+
+    it("should continue propagating when the target disconnects", function() {
+      var s = sig()
+      var t = sig()
+
+      var results = s
+        .tap(t)
+        .call(capture)
+
+      assert(!results.length)
 
       s.put(1)
        .put(2)
@@ -1388,7 +1515,7 @@ describe("sig", function() {
        .put(5)
        .put(6)
 
-      assert.deepEqual(results, [1, 2, 3])
+      assert.deepEqual(results, [1, 2, 3, 4, 5, 6])
     })
   })
 

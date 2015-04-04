@@ -360,6 +360,13 @@
   }
 
 
+  sig.prototype.tap = function(obj) {
+    return typeof obj == 'function'
+      ? tapFn(this, obj, sig.slice(arguments, 1))
+      : tapSig(this, obj)
+  }
+
+
   sig.prototype.call = function(fn) {
     return fn.apply(this, [this].concat(sig.slice(arguments, 1)))
   }
@@ -554,6 +561,26 @@
   }
 
 
+  function tapFn(s, fn, args) {
+    fn = sig.prime(args, fn)
+
+    return s.map(function(v) {
+      fn.call(this, v)
+      return v
+    })
+  }
+
+
+  function tapSig(s, t) {
+    var u = s.then(sig())
+
+    s.redir(t)
+     .call(dependOn, u)
+
+    return u
+  }
+
+
   function objEach(obj, fn) {
     if (Array.isArray(obj)) return obj.forEach(fn)
     for (var k in obj) if (obj.hasOwnProperty(k)) fn(obj[k], k)
@@ -631,6 +658,7 @@
   sig.receive = sig.static(sig.prototype.receive)
   sig.teardown = sig.static(sig.prototype.teardown)
   sig.each = sig.static(sig.prototype.each)
+  sig.tap = sig.static(sig.prototype.tap)
   sig.map = sig.static(sig.prototype.map)
   sig.filter = sig.static(sig.prototype.filter)
   sig.flatten = sig.static(sig.prototype.flatten)

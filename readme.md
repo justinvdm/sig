@@ -451,7 +451,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `each`, `map`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `map`, `each`, `tap`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -688,6 +688,25 @@ s.put(20)  // 23
 ```
 
 
+<a name="tap-fn"></a>
+### `.tap(fn[, args...])`
+
+Creates and returns a new target signal with a value handler that calls `fn`, then propogates the received value unchanged, allowing a function to 'tap' into a signal chain.
+
+```javascript
+var s = sig()
+
+s.map(function(v) { return v + 1 })
+ .tap(sig.log)
+ .filter(function(v) { return !(v % 2) })
+ .done()
+
+s.put(21)  // 22
+ .put(22)  // 23
+ .put(23)  // 24
+```
+
+
 <a name="map-fn"></a>
 ### `.map(fn[, args...])`
 
@@ -811,6 +830,31 @@ join(a, b)
 a.put(21)  // 21
 b.put(23)  // 23
 ```
+
+
+<a name="tap-t"></a>
+### `.tap(t)`
+
+Redirects values propagated by the calling signal to another signal `t` and returns a new signal that propagates the source signal's values unchanged. This allows a signal to 'tap' into another signal chain. 
+
+```javascript
+var s = sig()
+var t = sig()
+
+t.each(sig.log)
+ .done()
+
+s.map(function(v) { return v + 1 })
+ .tap(t)
+ .filter(function(v) { return !(v % 2) })
+ .done()
+
+s.put(21)  // 22
+ .put(22)  // 23
+ .put(23)  // 24
+```
+
+Redirection will stop when `t` disconnects, when the returned signal disconnects or when the source signal disconnects. When `t` disconnects, the returned signal will continue to propagate the source signal's values.
 
 
 <a name="flatten"></a>
