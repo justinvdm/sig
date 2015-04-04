@@ -193,12 +193,14 @@ describe("sig", function() {
       assert.deepEqual(b.targets, [c])
       assert(b.inBuffer.length)
       assert(b.outBuffer.length)
+      assert(!a.ending)
 
       b.resume().end()
       assert.strictEqual(b.source, null)
       assert(!b.targets.length)
       assert(!b.inBuffer.length)
       assert(!b.outBuffer.length)
+      assert(!a.ending)
     })
 
     it("should end its targets", function() {
@@ -305,8 +307,10 @@ describe("sig", function() {
     it("should delay signal ending until the buffer is clear", function() {
       var s = sig([1, 2, 3]).end()
       assert(!s.ended)
+      assert(s.ending)
       s.each(function(){}).done()
       assert(s.ended)
+      assert(!s.ending)
     })
 
     it("should not allow values to propagate from dead signals", function() {
@@ -358,6 +362,50 @@ describe("sig", function() {
       assert(!a.targets.length)
       assert.strictEqual(b.source, null)
       assert.strictEqual(c.source, null)
+    })
+
+    it("should not allow dead signals to be re-ended", function() {
+      var s = sig()
+      var ends = 0
+      sig._on(s, 'end', function() { ends++ })
+
+      s.end()
+       .end()
+       .end()
+
+      assert.strictEqual(ends, 1)
+    })
+
+    it("should not allow ending signals to be re-ended", function() {
+      var s = sig()
+      var endings = 0
+      sig._on(s, 'ending', function() { endings++ })
+
+      s.end()
+       .end()
+       .end()
+
+      assert.strictEqual(endings, 1)
+    })
+
+    it("should not allow dead signals to be re-killed", function() {
+      var s = sig()
+      var ends = 0
+      sig._on(s, 'end', function() { ends++ })
+
+      s.end()
+       .kill()
+       .kill()
+
+      assert.strictEqual(ends, 1)
+    })
+
+    it("should allow ending signals to be killed", function() {
+      var s = sig([23]).end()
+      assert(s.ending)
+      assert(!s.ended)
+      s.kill()
+      assert(s.ended)
     })
 
     it("should support forced ends", function() {

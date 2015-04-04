@@ -151,7 +151,11 @@
 
 
   sig.prototype.end = function() {
+    if (this.ending || this.ended) return this
+
     var uncleanBuffer = !!this.outBuffer.length
+    this.ending = true
+    emit(this, 'ending')
 
     send(this, {type: 'end'})
     disconnect(this)
@@ -166,6 +170,7 @@
 
 
   sig.prototype.kill = function() {
+    if (this.ended) return this
     forceEnd(this)
     return this
   }
@@ -557,6 +562,7 @@
     disconnect(s)
     clear(s)
     s.ended = true
+    s.ending = false
   }
 
 
@@ -672,6 +678,7 @@
   sig.update = sig.static(sig.prototype.update)
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
+  sig._on = on
 
   sig.Sig = Sig
   Sig.prototype = sig.prototype
