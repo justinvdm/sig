@@ -1,5 +1,6 @@
 var sig = require('./sig'),
-    assert = require('assert')
+    assert = require('assert'),
+    EventEmitter = require('events').EventEmitter
 
 
 function capture(s) {
@@ -103,8 +104,78 @@ describe("sig", function() {
     assert.deepEqual(results2, [1, 2, 3, 4])
   })
 
-  it("should allow initial values to be given", function() {
-    assert.deepEqual(capture(sig([1, 2, 3])), [1, 2, 3])
+  describe("adapters", function() {
+    var _adapters_ = sig._adapters_
+
+    beforeEach(function() {
+      sig._adapters_ = sig.slice(_adapters_)
+    })
+
+    after(function() {
+      sig._adapters_ = _adapters_
+    })
+
+    it("should support creating a signal from no arguments", function() {
+      assert(sig.isSig(sig()))
+    })
+
+    it("should support creating a signal from a value handling fn", function() {
+      var s = sig([21, 22, 23])
+      var t = s.then(sig(fn, 1, 2))
+      assert.deepEqual(capture(t), [24, 25, 26])
+
+      function fn(a, b, c) {
+        this.put(a + b + c).next()
+      }
+    })
+
+    it("should act as an identity function for existing signals", function() {
+      var s = sig()
+      assert.strictEqual(s, sig(s))
+    })
+
+    it("should allow initial values to be given", function() {
+      assert.deepEqual(capture(sig([1, 2, 3])), [1, 2, 3])
+    })
+
+    it("should support adding custom adapters", function() {
+      sig.adapts(test, adapt)
+      var ee = new EventEmitter()
+      var results = capture(sig(ee, 'foo'))
+
+      assert(!results.length)
+      ee.emit('foo', 21)
+      ee.emit('foo', 22)
+      ee.emit('foo', 23)
+      assert.deepEqual(results, [21, 22, 23])
+
+      function test(obj) {
+        return obj instanceof EventEmitter
+      }
+
+      function adapt(obj, eventName) {
+        var s = sig()
+        obj.on(eventName, listener)
+        s.teardown(teardown)
+        return s
+
+        function teardown() {
+          obj.removeListener(listener)
+        }
+
+        function listener(v) {
+          s.put(v)
+        }
+      }
+    })
+
+    it("should throw an error if the arguments cannot be adapted", function() {
+      sig._adapters_ = []
+
+      assert.throws(
+          function() { sig(21, 22, 23) },
+          /No sig adapter found for arguments: 21, 22, 23/)
+    })
   })
 
   describe("pausing and resuming", function() {
@@ -367,7 +438,7 @@ describe("sig", function() {
     it("should not allow dead signals to be re-ended", function() {
       var s = sig()
       var ends = 0
-      sig._on(s, 'end', function() { ends++ })
+      sig._on_(s, 'end', function() { ends++ })
 
       s.end()
        .end()
@@ -379,7 +450,7 @@ describe("sig", function() {
     it("should not allow ending signals to be re-ended", function() {
       var s = sig()
       var endings = 0
-      sig._on(s, 'ending', function() { endings++ })
+      sig._on_(s, 'ending', function() { endings++ })
 
       s.end()
        .end()
@@ -391,7 +462,7 @@ describe("sig", function() {
     it("should not allow dead signals to be re-killed", function() {
       var s = sig()
       var ends = 0
-      sig._on(s, 'end', function() { ends++ })
+      sig._on_(s, 'end', function() { ends++ })
 
       s.end()
        .kill()

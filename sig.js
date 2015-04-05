@@ -1,15 +1,14 @@
 ;(function() {
   var _nil_ = {}
+  var _adapters_ = []
 
   var isArray = Array.isArray
   var _slice = Array.prototype.slice
   var _log = console.log
 
 
-  function sig(obj) {
-    var s = new Sig()
-    if (obj) s.putEach(obj)
-    return s
+  function sig() {
+    return create.apply(this, arguments)
   }
 
 
@@ -31,6 +30,16 @@
     this.ended = false
     this.disconnected = false
     this.isDependant = false
+  }
+
+
+  sig.adapts = function(test, adapt) {
+    _adapters_.push({
+      test: test,
+      adapt: adapt
+    })
+
+    return this
   }
 
 
@@ -140,6 +149,7 @@
 
   sig.to = function(v, s) {
     s.put(v)
+    return this
   }
 
 
@@ -229,19 +239,15 @@
   }
 
 
-  sig.prototype.then = function(obj) {
-    return typeof obj == 'function'
-      ? thenFn(this, obj, sig.slice(arguments, 1))
-      : thenSig(this, obj)
+  sig.prototype.then = function() {
+    var t = sig.apply(this, arguments)
+    if (!this.ended) connect(this, t)
+    return t
   }
 
 
-  sig.prototype.catch = function(fn) {
-    var t = sig()
-    fn = sig.prime(sig.slice(arguments, 1), fn)
-    t.handlers.error = fn
-    this.then(t)
-    return t
+  sig.prototype.catch = function() {
+    return this.then(fromErrorHandler.apply(this, arguments))
   }
 
 
@@ -399,6 +405,46 @@
   }
 
 
+  function create() {
+    var adapt = findWrapper.apply(this, arguments)
+
+    if (!adapt) throw new Error(
+      'No sig adapter found for arguments: ' + sig.slice(arguments).join(', '))
+
+    return adapt.apply(this, arguments)
+  }
+
+
+  function findWrapper() {
+    var n = _adapters_.length
+    var i = -1
+    var w
+
+    while (++i < n) {
+      w = _adapters_[i]
+      if (!w.test.apply(this, arguments)) continue
+      return w.adapt
+    }
+  }
+
+
+  function fromArray(arr) {
+    var s = sig()
+    s.putEach(arr)
+    return s
+  }
+
+
+  function newSig() {
+    return new Sig()
+  }
+
+
+  function noArgs() {
+    return !arguments.length
+  }
+
+
   function putNextHandler(v) {
     this.put(v).next()
   }
@@ -510,17 +556,17 @@
   }
 
 
-  function thenFn(s, fn, args) {
-    var t = sig()
-    t.handlers.value = sig.prime(args, fn)
-    thenSig(s, t)
-    return t
+  function fromValueHandler(fn) {
+    var s = sig()
+    s.handlers.value = sig.prime(sig.slice(arguments, 1), fn)
+    return s
   }
 
 
-  function thenSig(s, t) {
-    if (!s.ended) connect(s, t)
-    return t
+  function fromErrorHandler(fn) {
+    var s = sig()
+    s.handlers.error = sig.prime(sig.slice(arguments, 1), fn)
+    return s
   }
 
 
@@ -647,12 +693,23 @@
   }
 
 
-  function isArguments( obj ) {
+  function isFn(obj) {
+    return typeof obj == 'function'
+  }
+
+
+  function isArguments(obj) {
     return typeof obj == 'object'
         && typeof obj.length == 'number'
         && 'callee' in obj
   }
 
+
+  sig
+    .adapts(noArgs, newSig)
+    .adapts(isFn, fromValueHandler)
+    .adapts(isArray, fromArray)
+    .adapts(sig.isSig, sig.identity)
 
   sig.put = sig.static(sig.prototype.put)
   sig.throw = sig.static(sig.prototype.throw)
@@ -678,7 +735,10 @@
   sig.update = sig.static(sig.prototype.update)
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
-  sig._on = on
+
+  sig._on_ = on
+  sig._nil_ = _nil_
+  sig._adapters_ = _adapters_
 
   sig.Sig = Sig
   Sig.prototype = sig.prototype
