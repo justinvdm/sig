@@ -406,7 +406,7 @@
 
 
   function create() {
-    var adapt = findWrapper.apply(this, arguments)
+    var adapt = findAdapter.apply(this, arguments)
 
     if (!adapt) throw new Error(
       'No sig adapter found for arguments: ' + sig.slice(arguments).join(', '))
@@ -415,15 +415,15 @@
   }
 
 
-  function findWrapper() {
+  function findAdapter() {
     var n = _adapters_.length
     var i = -1
-    var w
+    var d
 
     while (++i < n) {
-      w = _adapters_[i]
-      if (!w.test.apply(this, arguments)) continue
-      return w.adapt
+      d = _adapters_[i]
+      if (!d.test.apply(this, arguments)) continue
+      return d.adapt
     }
   }
 
