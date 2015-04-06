@@ -275,7 +275,8 @@
     fn = sig.prime(sig.slice(arguments, 1), fn)
 
     return this.then(function() {
-      fn.apply(this, arguments)
+      try { fn.apply(this, arguments) }
+      catch(e) { this.throw(e) }
       this.next()
     })
   }

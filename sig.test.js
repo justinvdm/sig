@@ -795,6 +795,15 @@ describe("sig", function() {
       s.putEach([1, 2, 3, 4])
        .end()
     })
+
+    it("should propagate natively thrown errors", function() {
+      var results = sig(['o_O', '-_-', ':/'])
+        .each(function(v) { throw new Error(v) })
+        .catch(function(e) { this.put(e.message).next() })
+        .call(capture)
+
+      assert.deepEqual(results, ['o_O', '-_-', ':/'])
+    })
   })
 
   

@@ -80,6 +80,7 @@ If any new values or errors are received before `.next()` has been called, they 
 
 Since sychronous handlers are likely to always call `.next()` at the end, [`.each()`](#each) is available as a thin wrapper around `.then()` that calls `.next()` itself once the given function has been called.
 
+<a name="error-handling"></a>
 ### error handling
 
 Errors propagate from a source signal to its target signals using [`.throw()`](#throw), much in the same way values propagate with [`.put()`](#put). [`catch`](#catch) is used to create a new target signal with a given error handler. As is the case for value propagation, the error handler needs to call [`.next()`](#next) to tell the signal to handle the next value or error.
@@ -686,6 +687,8 @@ s.each(function(a, b, c) { this.put(a + b + c) }, 1, 2)
 
 s.put(20)  // 23
 ```
+
+Since `.each()` is intended for use with synchronous functions, if `fn` throws an error using javascript's native `throw`, the error will be caught and as an error in the signal chain.
 
 
 <a name="tap-fn"></a>
