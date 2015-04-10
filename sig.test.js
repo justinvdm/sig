@@ -1467,13 +1467,13 @@ describe("sig", function() {
     })
   })
 
-  describe(".redir", function() {
+  describe(".to", function() {
     it("should redirect signal output", function() {
       var s = sig()
       var t = sig()
       var results = capture(t)
 
-      s.redir(t)
+      s.to(t)
 
       s.put(1)
        .put(2)
@@ -1487,7 +1487,7 @@ describe("sig", function() {
       var t = sig()
       var e = new Error(':/')
 
-      s.redir(t)
+      s.to(t)
 
       t.catch(function(nextE) {
         assert.strictEqual(e, nextE)
@@ -1500,7 +1500,7 @@ describe("sig", function() {
     it("should disconnect when the target has ended", function() {
       var s = sig()
       var t = sig()
-      var u = s.redir(t)
+      var u = s.to(t)
 
       assert(!u.disconnected)
       t.end()

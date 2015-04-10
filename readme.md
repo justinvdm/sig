@@ -378,15 +378,15 @@ out.end()
 //          logOut
 ```
 
-To redirect without this unwanted behaviour, [`.redir()`](#redir) should be used to redir values and errors to the returned signal, and to set these chains to disconnect when the returned signal is disconnected.
+To redirect without this unwanted behaviour, [`.to()`](#to) should be used to redirect values and errors to the returned signal, and to set these chains to disconnect when the returned signal is disconnected.
 
 If a function creates a signal chain, but the chain isn't returned, redirected or ended, this will lead to memory leaks. Rule of thumb: If you have a signal that outputs values, either return the signal, or redirect it to another returned signal.
 
 ```javascript
 function join(a, b) {
   var out = sig()
-  var redirA = a.redir(out)
-  var redirB = b.redir(out)
+  var redirA = a.to(out)
+  var redirB = b.to(out)
   return out
 }
 
@@ -452,7 +452,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `map`, `each`, `tap`, `filter`, `flatten`, `limit`, `once`, `then`, `redir`, `update`, `append`, `call`
+`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putTo`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `map`, `each`, `tap`, `filter`, `flatten`, `limit`, `once`, `then`, `to`, `redir`, `update`, `append`, `call`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -809,10 +809,37 @@ s.put(0)
 ```
 
 
+<a name="to"></a>
+### `.to(t)`
+
+Redirects values and errors sent from the calling signal to signal `t`. The returned signal is a new signal that controls this redirection. When either it, `s` or `t` are ended, the redirection ends. `to` behaves differently to `then`, as it does not set the calling signal as the source of `t`.
+
+```javascript
+function join(a, b) {
+  var out = sig()
+  a.to(out)
+  b.to(out)
+  return out
+}
+
+
+var a = sig()
+var b = sig()
+
+join(a, b)
+  .each(sig.log)
+  .done()
+
+a.put(21)  // 21
+b.put(23)  // 23
+```
+
+
 <a name="redir"></a>
 ### `.redir(t)`
 
-Redirects values and errors sent from the calling signal to signal `t`. The returned signal is a new signal that controls this redirection. When either it, `s` or `t` are ended, the redirection ends. `redir` behaves differently to `then`, as it does not set the calling signal as the source of `t`.
+Alias for [`.to()`](#to).
+
 
 ```javascript
 function join(a, b) {
@@ -833,7 +860,6 @@ join(a, b)
 a.put(21)  // 21
 b.put(23)  // 23
 ```
-
 
 <a name="tap-t"></a>
 ### `.tap(t)`
@@ -1147,8 +1173,7 @@ s.update()
 
 var t = sig()
 t.putTo(s)
-
-t.put(23)  // 23
+ .put(23)  // 23
 ```
 
 

@@ -323,7 +323,7 @@
   }
 
 
-  sig.prototype.redir = function(t) {
+  sig.prototype.redir = sig.prototype.to = function(t) {
     return this
       .each(sig.putTo, t)
       .catch(function(e) {
@@ -732,7 +732,7 @@
   sig.flatten = sig.static(sig.prototype.flatten)
   sig.limit = sig.static(sig.prototype.limit)
   sig.once = sig.static(sig.prototype.once)
-  sig.redir = sig.static(sig.prototype.redir)
+  sig.redir = sig.to = sig.static(sig.prototype.to)
   sig.update = sig.static(sig.prototype.update)
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
