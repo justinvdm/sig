@@ -1133,8 +1133,8 @@ s.putEach([1, 2, 3])
 ```
 
 
-<a name="to"></a>
-### `.to(t)`
+<a name="putTo"></a>
+### `.putTo(t)`
 
 Sends the signal as a value to signal `t`.
 
@@ -1146,7 +1146,7 @@ s.update()
  .done()
 
 var t = sig()
-t.to(s)
+t.putTo(s)
 
 t.put(23)  // 23
 ```
@@ -1378,7 +1378,7 @@ s.putEach([0, 1, 1, 0])
 ```
 
 
-<a name="to-static"></a>
-### `sig.to(v, s)`
+<a name="putTo-static"></a>
+### `sig.putTo(v, s)`
 
-The static form of [`.to()`](#to), except `v` can be a value of any time (it does not have to be a signal).
+The static form of [`.putTo()`](#putTo), except `v` can be a value of any time (it does not have to be a signal).

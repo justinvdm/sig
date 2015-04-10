@@ -147,7 +147,7 @@
   }
 
 
-  sig.to = function(v, s) {
+  sig.putTo = function(v, s) {
     s.put(v)
     return this
   }
@@ -303,7 +303,7 @@
 
   sig.prototype.flatten = function() {
     return this.each(function(v) {
-      deepEach(v, sig.to, this)
+      deepEach(v, sig.putTo, this)
     })
   }
 
@@ -325,7 +325,7 @@
 
   sig.prototype.redir = function(t) {
     return this
-      .each(sig.to, t)
+      .each(sig.putTo, t)
       .catch(function(e) {
         t.throw(e)
         this.next()
@@ -348,7 +348,7 @@
   }
 
 
-  sig.prototype.to = function(s) {
+  sig.prototype.putTo = function(s) {
     s.put(this)
     return this
   }

@@ -1648,13 +1648,13 @@ describe("sig", function() {
   })
 
 
-  describe(".to", function() {
+  describe(".putTo", function() {
     it("should put the given value onto the given signal", function() {
       var s = sig()
       var results = capture(s)
-      sig.to(1, s)
-      sig.to(2, s)
-      sig.to(3, s)
+      sig.putTo(1, s)
+      sig.putTo(2, s)
+      sig.putTo(3, s)
       assert.deepEqual(results, [1, 2, 3])
     })
   })
