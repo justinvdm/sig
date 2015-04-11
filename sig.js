@@ -221,6 +221,7 @@
 
   sig.prototype.resume = function() {
     this.paused = false
+    this.started = true
     flush(this)
     return this
   }
@@ -506,7 +507,6 @@
 
   function start(s) {
     if (s.started) return
-    s.started = true
     s.resume()
   }
 
