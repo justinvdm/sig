@@ -441,7 +441,7 @@ var s = sig([1, 2, 3])
 
 The following sig methods are also accessible as static functions taking a signal as the first argument:
 
-`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putTo`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `map`, `each`, `tap`, `filter`, `flatten`, `limit`, `once`, `then`, `to`, `redir`, `update`, `append`, `call`
+`put`, `then`, `done`, `next`, `end`, `kill`, `resolve`, `putTo`, `putEach`, `throw`, `catch`, `teardown`, `pause`, `resume`, `map`, `each`, `tap`, `filter`, `flatten`, `limit`, `once`, `then`, `to`, `redir`, `update`, `append`, `call`, `event`
 
 For example, using the static counterpart of [`.put`](#put) would look something like:
 
@@ -455,6 +455,29 @@ sig.put(s, 21)  // 21
 sig.put(s, 23)  // 23
 ```
 
+
+<a name="event-catalogue"></a>
+### event catalogue
+
+#### `disconnect`
+
+Emitted when a connected signal [disconnects](#disconnects).
+
+#### `reconnect`
+
+Emitted when a disconnected signal [reconnects](#disconnects).
+
+#### `flush`
+
+Emitted *after* a signal has propagated any buffered values or errors, if any, after being [resumed](#pausing-resuming).
+
+#### `end`
+
+Emitted once a signal is about to end, *before* the signal clears its state and gets marked as ended. See [disposal](#disposal).
+
+#### `ending`
+
+Emitted once a signal has been scheduled to end via [.end()](#end) or [.kill()](#kill). See [disposal](#disposal).
 
 <a name="put"></a>
 ### `.put([v])`
@@ -1087,6 +1110,23 @@ function mul(s, n) {
 }
 ```
 
+<a name="event"></a>
+### `.call(name)`
+
+Returns a new signal that propagates each event with the given `name` emitted by the signal. See the [event catalogue](#event-catalogue) for the events emitted by the signal.
+
+```
+var s = sig()
+
+s.event('flush')
+ .each(function() { sig.log('flush!') })
+ .done()
+
+s.pause()
+ .resume()  // flush!
+ .pause()
+ .resume()  // flush!
+```
 
 <a name="teardown"></a>
 ### `.teardown(fn[, args...])`
