@@ -408,19 +408,19 @@ describe("sig", function() {
       var c = sig()
 
       b.handlers.error = c.handlers.error = function(e) {
-        this.put(e).next()
+        this.put(e.message).next()
       }
 
       results = capture(b)
       a.targets = [b]
-      a.resume().put(21)
-      assert.deepEqual(results, [21])
+      a.resume().throw(new Error('o_O'))
+      assert.deepEqual(results, ['o_O'])
 
       a.end()
 
       results = capture(c)
       a.targets = [c]
-      a.put(23)
+      a.throw(new Error(':/'))
       assert(!results.length)
     })
 
