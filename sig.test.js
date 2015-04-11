@@ -401,27 +401,16 @@ describe("sig", function() {
       assert(!results.length)
     })
 
-    it("should not allow errors to propagate from dead signals", function() {
-      var results
-      var a = sig()
-      var b = sig()
-      var c = sig()
-
-      b.handlers.error = c.handlers.error = function(e) {
-        this.put(e.message).next()
-      }
-
-      results = capture(b)
-      a.targets = [b]
-      a.resume().throw(new Error('o_O'))
-      assert.deepEqual(results, ['o_O'])
-
+    it("should rethrow errors thrown from dead signals", function() {
+      var a = sig().resume()
+      var e = new Error('o_O')
+      assert.doesNotThrow(thrower)
       a.end()
+      assert.throws(thrower, /o_O/)
 
-      results = capture(c)
-      a.targets = [c]
-      a.throw(new Error(':/'))
-      assert(!results.length)
+      function thrower() {
+        a.throw(e)
+      }
     })
 
     it("should not allow targets to be added to dead signals", function() {

@@ -228,7 +228,7 @@
 
 
   sig.prototype.throw = function(e) {
-    if (this.ended) return this
+    if (this.ended) throw e
 
     send(this, {
       type: 'error',
