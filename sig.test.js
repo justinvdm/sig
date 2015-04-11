@@ -1496,6 +1496,28 @@ describe("sig", function() {
       t.end()
       assert(u.disconnected)
     })
+
+    it("should disconnect when the target disconnects", function() {
+      var s = sig()
+      var t = sig()
+      var u = s.to(t)
+      var v = t.done()
+
+      assert(!u.disconnected)
+      v.end()
+      assert(u.disconnected)
+    })
+
+    it("should reconnect when the target reconnects", function() {
+      var s = sig()
+      var t = sig()
+      var u = s.to(t)
+      t.done().end()
+
+      assert(u.disconnected)
+      t.then(sig()).done()
+      assert(!u.disconnected)
+    })
   })
 
 

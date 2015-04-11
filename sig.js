@@ -621,6 +621,7 @@
   function dependOn(s, t) {
     s.isDependant = true
     on(t, 'disconnect', disconnect, s)
+    on(t, 'reconnect', reconnect, s)
     return s
   }
 
