@@ -133,7 +133,13 @@ Note that `.throw()` and `.catch()` should always be used as a way to propagate 
 <a name="ending-chains"></a>
 ### ending chains
 
-At some point, the last signal in a chain is created, and the values or errors propogated through the chain can't propogate any further. For values, this is fine, any work requiring the values should have been done by now and they can be discarded. The same isn't true for errors -- if an error has propogated through the chain unhandled, it should not be silently ignored and discarded. For this reason, signal chains need to be ended explicitly with [`.done()`](#done).
+Once a signal chain has been set up, and values and errors can not propagate any further, [`.done()`](#done) should be used to declare the end of the signal chain. Once the end of the signal chain is declared, the signals in the chain are [`unpaused`](#pausing-resuming) for the first time to allow values and errors to start propagating.
+
+```javascript
+sig([23])
+  .each(sig.log)  // (nothing has been logged yet)
+  .done()  // 23 (the chain has been started, `23` has been logged)
+```
 
 If no function is given to `.done()`, it will rethrow unhandled errors using javascript's native `throw`, then kill the last signal in the chain with [`.kill()`](#kill).
 
@@ -283,6 +289,7 @@ b.then(e).done()
 // c     d     e
 ```
 
+<a name="pausing-resuming"></a>
 ### pausing and resuming
 
 When a signal is paused using [`pause`](#pause), any values given to it by [`put`](#put) are buffered. When the signal is resumed using [`resume`](#resume), any buffered values are sent to the signal's targets, and any new values will be sent straight to the signal's targets (and not get buffered).
@@ -301,29 +308,9 @@ s.resume()
 // 21
 // 23
 ```
+
+Note that signals start off paused and are unpaused for the first time either once the [end of the signal chain](#ending-chains) is declared or once [`.resume()`](#resume) is called explicitly.
  
-### eager signals
- 
-Eager signals are signals that start off paused, but resume after their first target signal is added. Note that signals are eager by default.
-
- 
-```javascript
-sig()
-  .put(21)
-  .put(23)
-  .each(sig.log)
-  .done()
-
-// 21
-// 23
-```
-
-A signal can be set to non-eager by setting the signal's `eager` property to `false`.
-
-```javascript
-var s = sig()
-s.eager = false
-```
 
 ### redirection
 
@@ -422,6 +409,8 @@ out.end()
 //              
 //          logOut
 ```
+
+Note that [`.to()`](#to) calls [`.done()`](#done). This means calling [`.to()`](#to) declares the end of a signal chain and starts the signal chain, and [`.done()`](#done) does not need to be called on redirected chains.
 
 <a name="sticky"></a>
 ### sticky signals
@@ -537,7 +526,7 @@ s.put(21)  // 21
 Ends the given signal immediately, regardless of whether the signal still has values it needs to send. See [disposal](#disposal).
 
 ```javascript
-sig([1, 2, 3])
+sig()
   .teardown(sig.log, 'Ended')
   .end()
   .kill()  // Ended
@@ -864,7 +853,7 @@ b.put(23)  // 23
 <a name="tap-t"></a>
 ### `.tap(t)`
 
-Redirects values propagated by the calling signal to another signal `t` and returns a new signal that propagates the source signal's values unchanged. This allows a signal to 'tap' into another signal chain. 
+Redirects values propagated by the calling signal to another signal `t` and returns a new signal that propagates the source signal's values unchanged. This allows a signal to 'tap' into another signal chain. Note that unlike [`.to()`](#to), `.tap()` does not implicately declare the end of a signal chain with [`.done()`](#done).
 
 ```javascript
 var s = sig()
