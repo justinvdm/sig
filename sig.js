@@ -609,6 +609,7 @@
     s.targets = []
     s.inBuffer = []
     s.outBuffer = []
+    s.listeners = []
     s.current = _nil_
   }
 
