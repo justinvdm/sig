@@ -222,23 +222,6 @@ describe("sig", function() {
       s.resume()
       assert.deepEqual(results, [1, 2, 3, 4])
     })
-
-    it("should support eager signals", function() {
-      var s = sig()
-      s.eager = true
-    
-      assert(s.paused)
-      var t = s.then(sig())
-      assert(!s.paused)
-    
-      s.pause()
-      s.then(sig()).done()
-      assert(s.paused)
-    
-      t.end()
-      s.then(sig()).done()
-      assert(s.paused)
-    })
   })
 
   describe("ending", function() {
@@ -648,6 +631,16 @@ describe("sig", function() {
 
 
   describe(".done", function() {
+    it("should start the signal chain", function() {
+      var s = sig()
+      var t = s.then(sig())
+      assert(!s.started)
+      assert(!t.started)
+      t.done()
+      assert(s.started)
+      assert(t.started)
+    })
+
     it("should callback when the signal ends", function() {
       var s = sig()
       var calls = 0
@@ -1479,9 +1472,10 @@ describe("sig", function() {
       s.to(t)
 
       t.catch(function(nextE) {
-        assert.strictEqual(e, nextE)
-        done()
-      })
+         assert.strictEqual(e, nextE)
+         done()
+       })
+       .done()
 
       s.throw(e)
     })

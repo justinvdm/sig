@@ -24,7 +24,6 @@
     this.eventListeners = {}
     this.paused = true
     this.started = false
-    this.eager = true
     this.sticky = false
     this.waiting = true
     this.ended = false
@@ -268,6 +267,7 @@
       .teardown(function() {
         if (!errored) fn()
       })
+      .call(startChain)
   }
 
 
@@ -330,6 +330,7 @@
         t.throw(e)
         this.next()
       })
+      .done()
       .call(dependOn, t)
   }
 
@@ -457,15 +458,12 @@
 
 
   function connect(s, t) {
-    var started = s.started
     setSource(t, s)
     addTarget(s, t)
-    s.started = true
 
     if (s.disconnected) reconnect(s)
 
-    if (s.eager && !started) s.resume()
-    else if (s.current != _nil_) receive(t, {
+    if (s.started && s.current != _nil_) receive(t, {
       type: 'value',
       data: s.current
     })
@@ -507,6 +505,20 @@
     while (++i < n) forceSend(s, buffer.shift())
     s.outBuffer = []
     emit(s, 'flush')
+  }
+
+
+  function start(s) {
+    if (s.started) return
+    s.started = true
+    s.resume()
+  }
+
+
+  function startChain(s) {
+    if (s.source) startChain(s.source)
+    start(s)
+    return s
   }
 
 
