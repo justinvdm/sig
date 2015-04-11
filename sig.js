@@ -64,7 +64,7 @@
     var t = s
      .filter(sig.spread, sig.isSig)
      .each(sig.spread, function(u, k) {
-       u.map(identityAll, k).redir(this)
+       u.map(identityAll, k).to(this)
      })
 
     s.putEach(pairs(values))
@@ -83,7 +83,7 @@
 
     if (!isEmpty(remaining))
       objEach(values, function(s, k) {
-        if (sig.isSig(s)) s.each(output, k).redir(out)
+        if (sig.isSig(s)) s.each(output, k).to(out)
       })
     else
       out.put(values)
@@ -325,11 +325,7 @@
 
   sig.prototype.redir = sig.prototype.to = function(t) {
     return this
-      .each(sig.putTo, t)
-      .catch(function(e) {
-        t.throw(e)
-        this.next()
-      })
+      .call(redirect, t)
       .done()
       .call(dependOn, t)
   }
@@ -362,7 +358,7 @@
     return this.each(function(v) {
       if (curr) curr.end()
       var u = fn(v)
-      if (sig.isSig(u)) curr = u.redir(this)
+      if (sig.isSig(u)) curr = u.to(this)
     })
   }
 
@@ -373,7 +369,7 @@
     return this
       .map(fn)
       .filter(sig.isSig)
-      .each(function(s) { s.redir(this) })
+      .each(function(s) { s.to(this) })
   }
 
 
@@ -630,6 +626,16 @@
   }
 
 
+  function redirect(s, t) {
+    return this
+      .each(sig.putTo, t)
+      .catch(function(e) {
+        t.throw(e)
+        this.next()
+      })
+  }
+
+
   function tapFn(s, fn, args) {
     fn = sig.prime(args, fn)
 
@@ -643,7 +649,7 @@
   function tapSig(s, t) {
     var u = s.then(sig())
 
-    s.redir(t)
+    s.call(redirect, t)
      .call(dependOn, u)
 
     return u
