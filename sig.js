@@ -387,6 +387,18 @@
   }
 
 
+  sig.prototype.event = function(name) {
+    var s = sig()
+    on(this, name, listener)
+    s.teardown(off, this, name, listener)
+    return s
+
+    function listener(v) {
+      s.put(v).next()
+    }
+  }
+
+
   var handlers = {}
 
 
@@ -585,6 +597,15 @@
     var listeners = s.eventListeners[event] || []
     s.eventListeners[event] = listeners
     listeners.push(fn)
+    return s
+  }
+
+
+  function off(s, event, fn) {
+    var listeners = s.eventListeners[event] || []
+    if (fn) rm(listeners, fn)
+    else s.eventListeners[event] = null
+    return s
   }
 
 
@@ -756,8 +777,9 @@
   sig.update = sig.static(sig.prototype.update)
   sig.append = sig.static(sig.prototype.append)
   sig.call = sig.static(sig.prototype.call)
+  sig.event = sig.static(sig.prototype.event)
 
-  sig._on_ = on
+  sig._emit_ = emit
   sig._nil_ = _nil_
   sig._adapters_ = _adapters_
 

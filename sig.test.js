@@ -34,6 +34,16 @@ function captureErrors(s) {
 }
 
 
+function counter(s) {
+  var i = 0
+
+  s.each(function() { i++ })
+   .done()
+
+  return function() { return i }
+}
+
+
 describe("sig", function() {
   it("should allow values to be sent through signals", function() {
     var src = sig()
@@ -409,38 +419,35 @@ describe("sig", function() {
 
     it("should not allow dead signals to be re-ended", function() {
       var s = sig()
-      var ends = 0
-      sig._on_(s, 'end', function() { ends++ })
+      var ends = s.event('end').call(counter)
 
       s.end()
        .end()
        .end()
 
-      assert.strictEqual(ends, 1)
+      assert.strictEqual(ends(), 1)
     })
 
     it("should not allow ending signals to be re-ended", function() {
       var s = sig()
-      var endings = 0
-      sig._on_(s, 'ending', function() { endings++ })
+      var endings = s.event('ending').call(counter)
 
       s.end()
        .end()
        .end()
 
-      assert.strictEqual(endings, 1)
+      assert.strictEqual(endings(), 1)
     })
 
     it("should not allow dead signals to be re-killed", function() {
       var s = sig()
-      var ends = 0
-      sig._on_(s, 'end', function() { ends++ })
+      var ends = s.event('end').call(counter)
 
       s.end()
        .kill()
        .kill()
 
-      assert.strictEqual(ends, 1)
+      assert.strictEqual(ends(), 1)
     })
 
     it("should allow ending signals to be killed", function() {
@@ -1668,6 +1675,31 @@ describe("sig", function() {
         assert.equal(b, 32)
         done()
       }
+    })
+  })
+
+
+  describe(".event", function() {
+    it("should propagate a value each event emit", function() {
+      var s = sig()
+      var results = s.event('foo').call(capture)
+
+      sig._emit_(s, 'foo', 21)
+      assert.deepEqual(results, [21])
+
+      sig._emit_(s, 'foo', 22)
+      assert.deepEqual(results, [21, 22])
+
+      sig._emit_(s, 'foo', 23)
+      assert.deepEqual(results, [21, 22, 23])
+    })
+
+    it("should stop listening when the event signal ends", function() {
+      var s = sig()
+      var t = s.event('foo')
+      assert.equal(s.eventListeners.foo.length, 1)
+      t.end()
+      assert(!s.eventListeners.foo.length)
     })
   })
 
