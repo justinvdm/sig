@@ -26,6 +26,7 @@
     this.started = false
     this.sticky = false
     this.waiting = true
+    this.ending = false
     this.ended = false
     this.disconnected = false
     this.isDependant = false
