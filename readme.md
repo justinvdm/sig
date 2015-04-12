@@ -1111,7 +1111,7 @@ function mul(s, n) {
 ```
 
 <a name="event"></a>
-### `.call(name)`
+### `.event(name)`
 
 Returns a new signal that propagates each event with the given `name` emitted by the signal. See the [event catalogue](#event-catalogue) for the events emitted by the signal.
 
