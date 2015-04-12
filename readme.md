@@ -1094,7 +1094,7 @@ t.put(7)  // 7
 
 Calls a function `fn` with the calling signal as its first argument and `args` as the remaining arguments. Useful for hooking custom functions into a signal chain.
 
-```
+```javascript
 var s = sig()
 
 s.call(mul, 2)
@@ -1115,7 +1115,7 @@ function mul(s, n) {
 
 Returns a new signal that propagates each event with the given `name` emitted by the signal. See the [event catalogue](#event-catalogue) for the events emitted by the signal.
 
-```
+```javascript
 var s = sig()
 
 s.event('flush')
