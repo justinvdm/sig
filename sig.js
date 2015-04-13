@@ -258,6 +258,9 @@
     fn = fn || throwingCallback
 
     return this
+      .teardown(function() {
+        if (!errored) fn()
+      })
       .then(function() {
         this.next()
       })
@@ -265,9 +268,6 @@
         errored = true
         fn(e)
         s.kill()
-      })
-      .teardown(function() {
-        if (!errored) fn()
       })
       .call(startChain)
   }

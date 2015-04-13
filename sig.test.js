@@ -658,6 +658,20 @@ describe("sig", function() {
       assert.strictEqual(calls, 1)
     })
 
+    it("should callback for immediately ended signal chains", function(done) {
+      var results = []
+
+      sig([1, 2, 3])
+        .end()
+        .each(function(v) {
+          results.push(v)
+        })
+        .done(function() {
+          assert.deepEqual(results, [1, 2, 3])
+          done()
+        })
+    })
+
     it("should errback when the signal encounters an error", function() {
       var s = sig()
       var calls = 0
