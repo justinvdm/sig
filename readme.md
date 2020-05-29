@@ -1643,7 +1643,7 @@ const sig = require('sig-js')
 It can also be used a `<script>`:
 
 ```html
-<script crossorigin src="https://unpkg.com/sig/dist/umd/sig.js"></script>
+<script crossorigin src="https://unpkg.com/sig-js/dist/umd/sig.js"></script>
 
 <script>
   sig()
