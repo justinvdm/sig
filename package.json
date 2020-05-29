@@ -2,15 +2,33 @@
   "name": "sig-js",
   "version": "0.5.1",
   "description": "high-level reactive-style programming in javascript",
-  "main": "sig.js",
+  "type": "commonjs",
+  "main": "./index.js",
+  "exports": {
+    "import": "./index.mjs",
+    "require": "./index.js"
+  },
   "scripts": {
-    "test": "mocha -R spec sig.test.js"
+    "build": "otr build",
+    "lint": "otr lint",
+    "format": "otr format",
+    "test": "otr test",
+    "release": "otr release",
+    "checks": "yarn lint && yarn build && yarn test"
   },
   "author": "justinvdm",
   "license": "MIT",
   "devDependencies": {
-    "mocha": "^1.21.4",
-    "drainpipe": "^0.1.0"
+    "@oftherivier/tools": "0.1.38"
+  },
+  "oftherivier": {
+    "type": "es5",
+    "src": "index.js"
+  },
+  "renovate": {
+    "extends": [
+      "github>oftherivier/tools"
+    ]
   },
   "repository": {
     "type": "git",
