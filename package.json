@@ -19,11 +19,12 @@
   "author": "justinvdm",
   "license": "MIT",
   "devDependencies": {
-    "@oftherivier/tools": "0.1.38"
+    "@oftherivier/tools": "0.1.39"
   },
   "oftherivier": {
     "type": "es5",
-    "src": "index.js"
+    "src": "index.js",
+    "bundleName": "sig"
   },
   "renovate": {
     "extends": [
