@@ -19,7 +19,7 @@
   "author": "justinvdm",
   "license": "MIT",
   "devDependencies": {
-    "@oftherivier/tools": "0.1.42"
+    "@oftherivier/tools": "0.1.43"
   },
   "oftherivier": {
     "type": "es5",
